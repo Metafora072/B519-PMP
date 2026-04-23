@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectVisibility {
+  PRIVATE
+  INTERNAL
+  PUBLIC
+}
+
+enum ProjectRole {
+  PROJECT_ADMIN
+  MODULE_OWNER
+  MEMBER
+  GUEST
+}
+
+enum TaskType {
+  REQUIREMENT
+  BUG
+  IMPROVEMENT
+  TECH_DEBT
+  RESEARCH
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CLOSED
+}
+
+enum TaskPriority {
+  P0
+  P1
+  P2
+  P3
+}
+
+model User {
+  id             BigInt             @id @default(autoincrement())
+  email          String             @unique @db.VarChar(255)
+  passwordHash   String             @map("password_hash") @db.VarChar(255)
+  name           String             @db.VarChar(100)
+  avatarUrl      String?            @map("avatar_url") @db.VarChar(500)
+  status         UserStatus         @default(ACTIVE)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  ownedProjects  Project[]          @relation("ProjectOwner")
+  projectMembers ProjectMember[]
+  ownedModules   Module[]
+  createdTasks   Task[]             @relation("TaskCreator")
+  assignedTasks  Task[]             @relation("TaskAssignee")
+  taskComments   TaskComment[]
+  activityLogs   TaskActivityLog[]
+
+  @@map("users")
+}
+
+model Project {
+  id           BigInt             @id @default(autoincrement())
+  name         String             @db.VarChar(120)
+  projectKey   String             @unique @map("project_key") @db.VarChar(30)
+  description  String?            @db.Text
+  icon         String?            @db.VarChar(255)
+  status       ProjectStatus      @default(ACTIVE)
+  visibility   ProjectVisibility  @default(PRIVATE)
+  ownerId      BigInt             @map("owner_id")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  owner        User               @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members      ProjectMember[]
+  modules      Module[]
+  tasks        Task[]
+  labels       Label[]
+  activityLogs TaskActivityLog[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        BigInt      @id @default(autoincrement())
+  projectId BigInt      @map("project_id")
+  userId    BigInt      @map("user_id")
+  role      ProjectRole
+  createdAt DateTime    @default(now()) @map("created_at")
+  project   Project     @relation(fields: [projectId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Module {
+  id          BigInt    @id @default(autoincrement())
+  projectId   BigInt    @map("project_id")
+  name        String    @db.VarChar(120)
+  description String?   @db.Text
+  ownerId     BigInt    @map("owner_id")
+  color       String?   @db.VarChar(30)
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  project     Project   @relation(fields: [projectId], references: [id])
+  owner       User      @relation(fields: [ownerId], references: [id])
+  tasks       Task[]
+
+  @@unique([projectId, name])
+  @@map("modules")
+}
+
+model Task {
+  id              BigInt             @id @default(autoincrement())
+  projectId       BigInt             @map("project_id")
+  moduleId        BigInt             @map("module_id")
+  taskNo          String             @map("task_no") @db.VarChar(50)
+  parentTaskId    BigInt?            @map("parent_task_id")
+  title           String             @db.VarChar(255)
+  description     String?            @db.Text
+  type            TaskType           @default(REQUIREMENT)
+  status          TaskStatus         @default(TODO)
+  priority        TaskPriority       @default(P2)
+  creatorId       BigInt             @map("creator_id")
+  assigneeId      BigInt?            @map("assignee_id")
+  dueAt           DateTime?          @map("due_at")
+  startAt         DateTime?          @map("start_at")
+  completedAt     DateTime?          @map("completed_at")
+  repoName        String?            @map("repo_name") @db.VarChar(255)
+  branchName      String?            @map("branch_name") @db.VarChar(255)
+  prUrl           String?            @map("pr_url") @db.VarChar(500)
+  issueUrl        String?            @map("issue_url") @db.VarChar(500)
+  estimateHours   Int?               @map("estimate_hours")
+  deletedAt       DateTime?          @map("deleted_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  project         Project            @relation(fields: [projectId], references: [id])
+  module          Module             @relation(fields: [moduleId], references: [id])
+  creator         User               @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee        User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  parentTask      Task?              @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  childTasks      Task[]             @relation("TaskHierarchy")
+  comments        TaskComment[]
+  activityLogs    TaskActivityLog[]
+  taskLabels      TaskLabel[]
+
+  @@unique([projectId, taskNo])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        BigInt   @id @default(autoincrement())
+  taskId    BigInt   @map("task_id")
+  userId    BigInt   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  task      Task     @relation(fields: [taskId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("task_comments")
+}
+
+model TaskActivityLog {
+  id           BigInt   @id @default(autoincrement())
+  projectId    BigInt   @map("project_id")
+  taskId       BigInt   @map("task_id")
+  operatorId   BigInt   @map("operator_id")
+  actionType   String   @map("action_type") @db.VarChar(100)
+  actionDetail Json?    @map("action_detail")
+  createdAt    DateTime @default(now()) @map("created_at")
+  project      Project  @relation(fields: [projectId], references: [id])
+  task         Task     @relation(fields: [taskId], references: [id])
+  operator     User     @relation(fields: [operatorId], references: [id])
+
+  @@map("task_activity_logs")
+}
+
+model Label {
+  id        BigInt      @id @default(autoincrement())
+  projectId BigInt      @map("project_id")
+  name      String      @db.VarChar(50)
+  color     String      @db.VarChar(30)
+  createdAt DateTime    @default(now()) @map("created_at")
+  project   Project     @relation(fields: [projectId], references: [id])
+  taskLabels TaskLabel[]
+
+  @@unique([projectId, name])
+  @@map("labels")
+}
+
+model TaskLabel {
+  id      BigInt @id @default(autoincrement())
+  taskId  BigInt @map("task_id")
+  labelId BigInt @map("label_id")
+  task    Task   @relation(fields: [taskId], references: [id])
+  label   Label  @relation(fields: [labelId], references: [id])
+
+  @@unique([taskId, labelId])
+  @@map("task_labels")
+}
+
