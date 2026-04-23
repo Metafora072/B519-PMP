@@ -1,0 +1,15 @@
+[Unit]
+Description=B519-PMP Build And Prepare
+Requires=b519-pmp-deps.service
+After=b519-pmp-deps.service
+PartOf=b519-pmp.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=__RUN_USER__
+Group=__RUN_GROUP__
+WorkingDirectory=__PROJECT_ROOT__
+EnvironmentFile=-__PROJECT_ROOT__/.env.systemd
+ExecStart=/usr/bin/env bash __PROJECT_ROOT__/scripts/systemd/prepare-app.sh
+TimeoutStartSec=900

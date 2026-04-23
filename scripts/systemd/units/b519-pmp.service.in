@@ -1,0 +1,14 @@
+[Unit]
+Description=B519-PMP Application Stack
+Requires=b519-pmp-deps.service b519-pmp-prepare.service b519-pmp-server.service b519-pmp-web.service
+After=b519-pmp-deps.service b519-pmp-prepare.service b519-pmp-server.service b519-pmp-web.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/bin/true
+
+[Install]
+WantedBy=multi-user.target
+

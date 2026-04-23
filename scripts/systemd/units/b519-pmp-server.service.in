@@ -1,0 +1,19 @@
+[Unit]
+Description=B519-PMP NestJS Server
+Requires=b519-pmp-prepare.service
+After=b519-pmp-prepare.service network-online.target
+Wants=network-online.target
+PartOf=b519-pmp.service
+
+[Service]
+Type=simple
+User=__RUN_USER__
+Group=__RUN_GROUP__
+WorkingDirectory=__PROJECT_ROOT__/server
+Environment=NODE_ENV=production
+EnvironmentFile=-__PROJECT_ROOT__/.env.systemd
+EnvironmentFile=-__PROJECT_ROOT__/server/.env
+ExecStart=/usr/bin/env bash __PROJECT_ROOT__/scripts/systemd/run-server.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30

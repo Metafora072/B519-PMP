@@ -10,6 +10,43 @@
 - 登录页、首页骨架、左侧导航栏、顶部栏
 - `docker-compose.yml` 中的 PostgreSQL 与 Redis
 
+## 第 2 阶段已完成
+
+- 新增 `projects`、`modules`、`tasks` 三个后端业务模块，均按 `controller / service / dto / module` 分层
+- 所有业务接口接入当前登录用户鉴权，统一通过 JWT Cookie 访问
+- 增加项目成员权限兜底：非项目成员不能读取或修改项目、模块、任务数据
+- 新增项目成员管理接口：查询成员、添加成员
+- 新增任务列表筛选与分页：`status`、`priority`、`moduleId`、`assigneeId`、`keyword`、`page`、`pageSize`
+- 实现安全的任务编号生成方案：在 `projects.task_seq` 上做原子自增，生成 `PROJECTKEY-序号`
+- 所有任务写操作补齐 activity log：创建、标题变更、描述变更、状态变更、优先级变更、负责人变更、删除
+
+## 第 2 阶段新增接口
+
+- 项目
+  - `GET /api/projects`
+  - `POST /api/projects`
+  - `GET /api/projects/:id`
+  - `PATCH /api/projects/:id`
+  - `DELETE /api/projects/:id`
+- 项目成员
+  - `GET /api/projects/:id/members`
+  - `POST /api/projects/:id/members`
+- 模块
+  - `GET /api/projects/:id/modules`
+  - `POST /api/projects/:id/modules`
+  - `GET /api/modules/:id`
+  - `PATCH /api/modules/:id`
+  - `DELETE /api/modules/:id`
+- 任务
+  - `GET /api/projects/:id/tasks`
+  - `POST /api/projects/:id/tasks`
+  - `GET /api/tasks/:id`
+  - `PATCH /api/tasks/:id`
+  - `DELETE /api/tasks/:id`
+  - `PATCH /api/tasks/:id/status`
+  - `PATCH /api/tasks/:id/priority`
+  - `PATCH /api/tasks/:id/assignee`
+
 ## 目录结构
 
 ```text
@@ -37,7 +74,9 @@ B519-PMP/
 │   │   │   │   ├── current-user.decorator.ts
 │   │   │   │   └── skip-serialize.decorator.ts
 │   │   │   ├── filters/http-exception.filter.ts
-│   │   │   └── interceptors/transform-response.interceptor.ts
+│   │   │   ├── interceptors/transform-response.interceptor.ts
+│   │   │   ├── types/current-user.type.ts
+│   │   │   └── utils/
 │   │   ├── config/
 │   │   │   ├── env.configuration.ts
 │   │   │   └── validation.schema.ts
@@ -54,6 +93,21 @@ B519-PMP/
 │   │   │   │   ├── auth.module.ts
 │   │   │   │   ├── auth.service.ts
 │   │   │   │   └── jwt.strategy.ts
+│   │   │   ├── modules/
+│   │   │   │   ├── dto/
+│   │   │   │   ├── modules.controller.ts
+│   │   │   │   ├── modules.module.ts
+│   │   │   │   └── modules.service.ts
+│   │   │   ├── projects/
+│   │   │   │   ├── dto/
+│   │   │   │   ├── projects.controller.ts
+│   │   │   │   ├── projects.module.ts
+│   │   │   │   └── projects.service.ts
+│   │   │   ├── tasks/
+│   │   │   │   ├── dto/
+│   │   │   │   ├── tasks.controller.ts
+│   │   │   │   ├── tasks.module.ts
+│   │   │   │   └── tasks.service.ts
 │   │   │   └── users/
 │   │   │       ├── users.module.ts
 │   │   │       └── users.service.ts
@@ -147,9 +201,80 @@ B519-PMP/
    - 前端：`http://localhost:3000`
    - 后端：`http://localhost:3001/api`
 
+## systemd 服务化
+
+仓库已内置 systemd 安装脚本与 unit 模板，默认会把以下进程纳入同一套 systemd 编排：
+
+- `b519-pmp-deps.service`：启动 `docker-compose.yml` 中的 PostgreSQL / Redis
+- `b519-pmp-prepare.service`：执行 `npm install`、`prisma generate`、`prisma migrate deploy`、前后端构建
+- `b519-pmp-server.service`：启动 NestJS 后端
+- `b519-pmp-web.service`：启动 Next.js 前端
+- `b519-pmp.service`：聚合服务，统一对外提供一键启动 / 停止入口
+
+安装：
+
+```bash
+npm run service:install
+```
+
+安装并立即启动：
+
+```bash
+npm run service:install -- --start
+```
+
+如果主机拉取 Docker 镜像、`npm install` 或 `node-pre-gyp` 需要走代理，先准备 systemd 环境文件：
+
+```bash
+cp .env.systemd.example .env.systemd
+```
+
+按需修改其中的 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY`、`NO_PROXY`，再执行安装或重启 service。
+
+常用命令：
+
+```bash
+sudo systemctl start b519-pmp.service
+sudo systemctl stop b519-pmp.service
+sudo systemctl restart b519-pmp.service
+sudo systemctl status b519-pmp.service
+```
+
+查看子服务状态：
+
+```bash
+sudo systemctl status b519-pmp-deps.service
+sudo systemctl status b519-pmp-prepare.service
+sudo systemctl status b519-pmp-server.service
+sudo systemctl status b519-pmp-web.service
+```
+
+卸载：
+
+```bash
+npm run service:uninstall
+```
+
+说明：
+
+- service 默认按生产方式运行，后端通过 `node server/dist/main.js` 启动，前端通过 `next start` 启动
+- service 依赖本机已安装可用的 `node`、`npm`、`docker compose` 与 `systemd`
+- 首次 `start` 时会自动执行依赖安装、数据库迁移与前后端构建，耗时会明显长于普通重启
+- 后端环境变量读取 `server/.env`，前端运行目录为 `web/`
+
+> 第 2 阶段新增了 `projects.task_seq` 字段，用于生成安全递增的任务编号。
+> 执行数据库初始化或迁移时，请确保最新 schema 已应用。
+
 ## 下一阶段建议
 
-- 接入项目、模块、任务三大领域模块的 REST API
-- 增加项目首页概览、任务列表、看板三类业务页面
-- 引入 TanStack Query 与 Zustand，补齐前端数据层
-- 增加基于项目成员角色的权限校验与操作日志写入
+- 前端接入项目列表、项目详情、模块列表、任务列表接口，完成真实数据渲染
+- 继续补齐评论、活动日志查询、项目概览统计接口
+- 增加更细粒度的角色权限，如项目管理员、模块负责人、普通成员的写入差异
+- 为任务状态流转补充更明确的业务规则校验与集成测试
+
+## 后续联调建议
+
+- 前端先接 `GET /api/projects`、`GET /api/projects/:id`、`GET /api/projects/:id/tasks` 三个读取接口，完成项目首页与任务列表联调
+- 新建任务时先拉 `GET /api/projects/:id/modules` 与 `GET /api/projects/:id/members`，用于模块和负责人选择器
+- 前端任务编辑建议优先走专用接口：状态、优先级、负责人分别调用独立 patch 路由，减少表单 diff 复杂度
+- 联调时统一携带 Cookie，前端请求需开启 `credentials: "include"`

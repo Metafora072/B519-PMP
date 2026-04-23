@@ -81,6 +81,7 @@ model Project {
   status       ProjectStatus      @default(ACTIVE)
   visibility   ProjectVisibility  @default(PRIVATE)
   ownerId      BigInt             @map("owner_id")
+  taskSeq      Int                @default(0) @map("task_seq")
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
   owner        User               @relation("ProjectOwner", fields: [ownerId], references: [id])
@@ -213,4 +214,3 @@ model TaskLabel {
   @@unique([taskId, labelId])
   @@map("task_labels")
 }
-

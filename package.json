@@ -7,12 +7,16 @@
     "server"
   ],
   "scripts": {
+    "build": "npm run build:server && npm run build:web",
     "dev:web": "npm run dev -w web",
     "dev:server": "npm run start:dev -w server",
     "build:web": "npm run build -w web",
     "build:server": "npm run build -w server",
+    "start:web": "npm run start -w web -- --hostname 0.0.0.0 --port 3000",
+    "start:server": "node server/dist/main.js",
     "lint:web": "npm run lint -w web",
-    "lint:server": "npm run lint -w server"
+    "lint:server": "npm run lint -w server",
+    "service:install": "bash scripts/systemd/install.sh",
+    "service:uninstall": "bash scripts/systemd/uninstall.sh"
   }
 }
-

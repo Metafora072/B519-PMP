@@ -19,6 +19,12 @@ export type UserProfile = Prisma.UserGetPayload<{ select: typeof userProfileSele
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findById(id: bigint) {
+    return this.prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
@@ -43,4 +49,3 @@ export class UsersService {
     });
   }
 }
-

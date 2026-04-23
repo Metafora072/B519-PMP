@@ -3,10 +3,10 @@ node_modules
 dist
 .turbo
 .env
+.env.systemd
 .env.local
 .env.*.local
 coverage
 *.log
 .DS_Store
 server/generated
-
