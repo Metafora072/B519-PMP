@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, KanbanSquare, ListFilter } from "lucide-react";
+import { ArrowLeft, KanbanSquare, ListFilter, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ProjectViewTabs } from "@/features/project/project-view-tabs";
+import { TaskCreateDialog } from "@/features/task/task-create-dialog";
 import { TaskDetailDrawer } from "@/features/task/task-detail-drawer";
 import { TaskFiltersBar } from "@/features/task/task-filters-bar";
 import { TaskTable } from "@/features/task/task-table";
@@ -23,6 +26,7 @@ type TaskListPageProps = {
 export function TaskListPage({ projectId }: TaskListPageProps) {
   const { filters, queryFilters, resetFilters, updateFilter } = useTaskFilters();
   const openDrawer = useTaskDrawerStore((state) => state.openDrawer);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const projectQuery = useProjectQuery(projectId);
   const membersQuery = useProjectMembersQuery(projectId);
@@ -46,9 +50,10 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
                 {projectQuery.data?.name ?? "项目任务"}
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-[#646a73]">
-                顶部筛选、关键字搜索、分页与右侧详情抽屉都已接入真实任务接口，列表操作会自动刷新。
+                顶部筛选、关键字搜索、分页与右侧详情抽屉都已接入真实任务接口，任务视图与看板视图共享同一套缓存。
               </p>
             </div>
+            <ProjectViewTabs projectId={projectId} current="tasks" />
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -58,9 +63,15 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
                 返回项目详情
               </Button>
             </Link>
-            <Button variant="secondary">
-              <KanbanSquare className="mr-2 h-4 w-4" />
-              看板页下一阶段接入
+            <Link href={`/projects/${projectId}/board`}>
+              <Button variant="secondary">
+                <KanbanSquare className="mr-2 h-4 w-4" />
+                切换到看板
+              </Button>
+            </Link>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              新建任务
             </Button>
           </div>
         </div>
@@ -91,6 +102,13 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
       ) : null}
 
       <TaskDetailDrawer members={members} modules={modules} />
+      <TaskCreateDialog
+        open={createDialogOpen}
+        projectId={projectId}
+        modules={modules}
+        members={members}
+        onClose={() => setCreateDialogOpen(false)}
+      />
     </div>
   );
 }

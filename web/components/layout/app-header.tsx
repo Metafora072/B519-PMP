@@ -9,6 +9,13 @@ import { queryKeys } from "@/services/query-keys";
 import { getCurrentUser } from "@/services/auth";
 
 function getRouteMeta(pathname: string) {
+  if (pathname.startsWith("/projects/") && pathname.endsWith("/board")) {
+    return {
+      eyebrow: "项目看板",
+      title: "任务看板",
+    };
+  }
+
   if (pathname.startsWith("/projects/") && pathname.endsWith("/tasks")) {
     return {
       eyebrow: "项目任务",

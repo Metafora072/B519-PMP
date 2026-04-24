@@ -1,8 +1,10 @@
 import { apiRequest } from "@/lib/api";
 
 import type {
+  CreateTaskInput,
   PaginatedTasks,
   ProjectTaskSummary,
+  TaskBoardFilters,
   TaskListFilters,
   TaskPriority,
   TaskRecord,
@@ -13,6 +15,38 @@ import type {
 export function getProjectTasks(projectId: string, filters: TaskListFilters) {
   return apiRequest<PaginatedTasks, undefined, TaskListFilters>(`/api/projects/${projectId}/tasks`, {
     query: filters,
+  });
+}
+
+export async function getProjectBoardTasks(projectId: string, filters: TaskBoardFilters) {
+  const firstPage = await getProjectTasks(projectId, {
+    ...filters,
+    page: 1,
+    pageSize: 100,
+  });
+
+  const pages = Array.from(
+    { length: Math.max(0, firstPage.pagination.totalPages - 1) },
+    (_, index) => index + 2,
+  );
+
+  const otherPages = await Promise.all(
+    pages.map((page) =>
+      getProjectTasks(projectId, {
+        ...filters,
+        page,
+        pageSize: 100,
+      }),
+    ),
+  );
+
+  return [firstPage, ...otherPages].flatMap((page) => page.items);
+}
+
+export function createTask(projectId: string, input: CreateTaskInput) {
+  return apiRequest<TaskRecord, CreateTaskInput>(`/api/projects/${projectId}/tasks`, {
+    method: "POST",
+    body: input,
   });
 }
 

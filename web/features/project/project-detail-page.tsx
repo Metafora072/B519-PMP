@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, LayoutList, Sparkles, Users } from "lucide-react";
+import { ArrowRight, KanbanSquare, LayoutList, Sparkles, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleSummaryList } from "@/features/module/module-summary-list";
+import { ProjectViewTabs } from "@/features/project/project-view-tabs";
 import {
   useProjectMembersQuery,
   useProjectModulesQuery,
@@ -91,6 +92,8 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
                 </div>
               ))}
             </div>
+
+            <ProjectViewTabs projectId={project.id} current="overview" />
           </div>
 
           <div className="flex flex-wrap gap-3 xl:justify-end">
@@ -98,6 +101,12 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
               <Button>
                 <LayoutList className="mr-2 h-4 w-4" />
                 查看任务页
+              </Button>
+            </Link>
+            <Link href={`/projects/${project.id}/board`}>
+              <Button variant="secondary">
+                <KanbanSquare className="mr-2 h-4 w-4" />
+                看板视图
               </Button>
             </Link>
             <Link href="/projects">
@@ -154,7 +163,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
           <CardContent className="space-y-3 text-sm leading-7 text-[#646a73]">
             <p>项目详情页已串起项目基础信息、成员、模块与任务统计。</p>
             <p>任务统计通过真实任务接口汇总得到，不再依赖静态 mock。</p>
-            <p>下一步可以把评论流、活动日志和看板视图直接接入这个详情入口。</p>
+            <p>当前已具备概览、列表、看板三种主视图，后续可以继续补评论与活动日志。</p>
           </CardContent>
         </Card>
       </section>

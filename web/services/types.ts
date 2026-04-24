@@ -127,10 +127,27 @@ export type TaskListFilters = {
   pageSize?: number;
 };
 
+export type TaskBoardFilters = {
+  priority?: TaskPriority;
+  moduleId?: string;
+  assigneeId?: string;
+  keyword?: string;
+};
+
 export type CreateProjectInput = {
   name: string;
   projectKey: string;
   description?: string;
+};
+
+export type CreateTaskInput = {
+  moduleId: string;
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  assigneeId?: string;
+  dueAt?: string | null;
 };
 
 export type UpdateTaskInput = {

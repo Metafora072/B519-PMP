@@ -30,11 +30,25 @@
 - 完成右侧任务详情抽屉，支持标题、描述、模块、截止时间编辑，以及状态 / 优先级 / 负责人独立 patch
 - 所有任务详情更新后自动刷新任务列表、任务详情与项目统计缓存
 
+## 第 4 阶段已完成
+
+- 新增 `/projects/:id/board` 项目看板页，作为项目主视图之一接入真实任务数据
+- 引入 dnd-kit 完成按状态分列的任务看板，支持 Todo / In Progress / Done 三列拖拽流转
+- 看板页接入轻量搜索与筛选，支持按关键字、优先级、模块、负责人过滤任务
+- 看板卡片复用现有任务详情抽屉，点击卡片即可打开右侧详情并继续编辑
+- 新增任务创建弹窗，支持在看板工具栏和列头快速创建任务
+- 拖拽改状态采用前端乐观更新，请求失败时自动回滚并通过 toast 提示错误
+- 拖拽与编辑成功后同步刷新任务列表缓存、看板缓存、任务详情缓存与项目统计缓存
+
 ## 第 3 阶段新增路由
 
 - `/projects`
 - `/projects/:id`
 - `/projects/:id/tasks`
+
+## 第 4 阶段新增路由
+
+- `/projects/:id/board`
 
 ## 第 3 阶段核心组件
 
@@ -48,9 +62,27 @@
 - `web/features/task/task-detail-drawer.tsx`
 - `web/components/providers/app-providers.tsx`
 
+## 第 4 阶段核心组件
+
+- `web/features/project/project-view-tabs.tsx`
+- `web/features/task/task-board-page.tsx`
+- `web/features/task/task-board.tsx`
+- `web/features/task/task-board-column.tsx`
+- `web/features/task/task-board-card.tsx`
+- `web/features/task/task-board-toolbar.tsx`
+- `web/features/task/task-create-dialog.tsx`
+- `web/components/ui/toast-viewport.tsx`
+
+## 第 4 阶段拖拽状态同步策略
+
+- 看板页基于 TanStack Query 的 board query 拉取当前项目任务，并在页面内维护一份可拖拽的本地任务顺序
+- 拖拽结束后先对本地任务列表做乐观状态更新，立即把卡片移动到目标列
+- 同时调用 `PATCH /api/tasks/:id/status` 写回后端
+- 若接口失败，则把任务状态回滚到拖拽前，并通过 toast 提示错误原因
+- 若接口成功，则把返回的最新任务实体写回任务列表缓存、看板缓存、任务详情缓存，并刷新项目统计缓存
+
 ## 下一阶段建议
 
-- 看板页：补齐按状态拖拽的任务看板，形成项目主视图
 - 评论：接入任务评论流，支持任务内协作闭环
 - 活动日志：把后端 activity log 前端化，替换详情页占位动态区
 - 统计：增加项目燃尽、负责人负载、模块进展等轻量分析卡片
