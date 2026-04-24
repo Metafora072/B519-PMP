@@ -5,7 +5,10 @@ const config: Config = {
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./features/**/*.{ts,tsx}",
+    "./hooks/**/*.{ts,tsx}",
     "./lib/**/*.{ts,tsx}",
+    "./services/**/*.{ts,tsx}",
+    "./store/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
@@ -37,4 +40,3 @@ const config: Config = {
 };
 
 export default config;
-

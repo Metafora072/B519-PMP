@@ -136,12 +136,11 @@ export default function HomePage() {
             <CardTitle>本阶段说明</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-6 text-[#646a73]">
-            <p>当前已完成工程初始化、认证模块、登录页和工作台骨架。</p>
-            <p>下一阶段可以继续进入项目管理、模块管理、任务列表和看板能力。</p>
+            <p>当前已完成工程初始化、认证模块，以及第 3 阶段的项目页、任务列表页与任务抽屉。</p>
+            <p>下一阶段可以继续进入看板页、评论、活动日志与统计分析能力。</p>
           </CardContent>
         </Card>
       </section>
     </div>
   );
 }
-

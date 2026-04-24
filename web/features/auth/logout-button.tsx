@@ -3,15 +3,14 @@
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { buildApiUrl } from "@/lib/api";
+import { apiRequest } from "@/lib/api";
 
 export function LogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch(buildApiUrl("/api/auth/logout"), {
+    await apiRequest("/api/auth/logout", {
       method: "POST",
-      credentials: "include",
     });
 
     router.push("/login");
@@ -24,4 +23,3 @@ export function LogoutButton() {
     </Button>
   );
 }
-

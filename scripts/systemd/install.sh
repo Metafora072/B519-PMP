@@ -16,6 +16,10 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+log() {
+  printf '[b519-pmp][install] %s\n' "$*"
+}
+
 render_unit() {
   local template_file="$1"
   local target_file="$2"
@@ -29,10 +33,12 @@ render_unit() {
 
 for template in "$UNITS_DIR"/*.in; do
   base_name="$(basename "$template" .in)"
+  log "渲染 unit: $base_name"
   render_unit "$template" "$TMP_DIR/$base_name"
   sudo install -m 0644 "$TMP_DIR/$base_name" "$SYSTEMD_DIR/$base_name"
 done
 
+log "更新脚本执行权限"
 sudo chmod +x \
   "$PROJECT_ROOT/scripts/systemd/common.sh" \
   "$PROJECT_ROOT/scripts/systemd/manage-deps.sh" \
@@ -40,10 +46,13 @@ sudo chmod +x \
   "$PROJECT_ROOT/scripts/systemd/run-server.sh" \
   "$PROJECT_ROOT/scripts/systemd/run-web.sh"
 
+log "执行 systemd daemon-reload"
 sudo systemctl daemon-reload
+log "启用 b519-pmp.service"
 sudo systemctl enable b519-pmp.service
 
 if [ "$AUTO_START" = "true" ]; then
+  log "自动启动 b519-pmp.service"
   sudo systemctl restart b519-pmp.service
 fi
 
@@ -51,4 +60,4 @@ printf '已安装 systemd 单元。\n'
 printf '启动: sudo systemctl start b519-pmp.service\n'
 printf '停止: sudo systemctl stop b519-pmp.service\n'
 printf '状态: sudo systemctl status b519-pmp.service\n'
-
+printf '日志: sudo journalctl -u b519-pmp-deps.service -u b519-pmp-prepare.service -u b519-pmp-server.service -u b519-pmp-web.service -f\n'

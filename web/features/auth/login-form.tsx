@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildApiUrl } from "@/lib/api";
+import { apiRequest } from "@/lib/api";
 
 type AuthMode = "login" | "register";
 
@@ -32,31 +32,16 @@ export function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(buildApiUrl(`/api/auth/${mode}`), {
+      await apiRequest(`/api/auth/${mode}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(
+        body:
           mode === "login"
             ? {
                 email: formData.email,
                 password: formData.password,
               }
             : formData,
-        ),
       });
-
-      const payload = (await response.json()) as {
-        success: boolean;
-        message?: string | string[];
-      };
-
-      if (!response.ok) {
-        const message = Array.isArray(payload.message) ? payload.message.join("，") : payload.message;
-        throw new Error(message ?? "请求失败");
-      }
 
       setSuccessMessage(mode === "login" ? "登录成功，正在跳转..." : "注册成功，正在跳转...");
       router.push("/");

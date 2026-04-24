@@ -9,9 +9,11 @@ Type=oneshot
 RemainAfterExit=yes
 User=__RUN_USER__
 Group=__RUN_GROUP__
+SyslogIdentifier=b519-pmp-deps
+StandardOutput=journal
+StandardError=journal
 WorkingDirectory=__PROJECT_ROOT__
 ExecStart=/usr/bin/env bash __PROJECT_ROOT__/scripts/systemd/manage-deps.sh start
 ExecStop=/usr/bin/env bash __PROJECT_ROOT__/scripts/systemd/manage-deps.sh stop
 TimeoutStartSec=180
 TimeoutStopSec=120
-

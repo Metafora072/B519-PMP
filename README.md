@@ -1,6 +1,6 @@
 # Code Project Platform
 
-基于设计文档 `Code-project-platform-design-spec.md` 的第 1 阶段实现，当前完成：
+基于设计文档 `Code-project-platform-design-spec.md` 的分阶段实现，当前完成：
 
 - 前后端分离的 monorepo 基础工程初始化
 - NestJS + Prisma + PostgreSQL + Redis 后端基础结构
@@ -19,6 +19,41 @@
 - 新增任务列表筛选与分页：`status`、`priority`、`moduleId`、`assigneeId`、`keyword`、`page`、`pageSize`
 - 实现安全的任务编号生成方案：在 `projects.task_seq` 上做原子自增，生成 `PROJECTKEY-序号`
 - 所有任务写操作补齐 activity log：创建、标题变更、描述变更、状态变更、优先级变更、负责人变更、删除
+
+## 第 3 阶段已完成
+
+- 前端补齐 TanStack Query 与 Zustand，建立统一 API Client、查询缓存、任务抽屉状态管理
+- 新增 `features/project`、`features/module`、`features/task`、`hooks`、`store`、`services` 目录，按业务域拆分前端结构
+- 完成 `/projects` 项目列表页，支持卡片布局与创建项目弹窗
+- 完成 `/projects/:id` 项目详情页，接入项目、成员、模块与任务统计
+- 完成 `/projects/:id/tasks` 任务列表页，支持状态、优先级、模块、负责人、关键字筛选与分页
+- 完成右侧任务详情抽屉，支持标题、描述、模块、截止时间编辑，以及状态 / 优先级 / 负责人独立 patch
+- 所有任务详情更新后自动刷新任务列表、任务详情与项目统计缓存
+
+## 第 3 阶段新增路由
+
+- `/projects`
+- `/projects/:id`
+- `/projects/:id/tasks`
+
+## 第 3 阶段核心组件
+
+- `web/features/project/project-list-page.tsx`
+- `web/features/project/project-detail-page.tsx`
+- `web/features/project/project-create-dialog.tsx`
+- `web/features/module/module-summary-list.tsx`
+- `web/features/task/task-list-page.tsx`
+- `web/features/task/task-filters-bar.tsx`
+- `web/features/task/task-table.tsx`
+- `web/features/task/task-detail-drawer.tsx`
+- `web/components/providers/app-providers.tsx`
+
+## 下一阶段建议
+
+- 看板页：补齐按状态拖拽的任务看板，形成项目主视图
+- 评论：接入任务评论流，支持任务内协作闭环
+- 活动日志：把后端 activity log 前端化，替换详情页占位动态区
+- 统计：增加项目燃尽、负责人负载、模块进展等轻量分析卡片
 
 ## 第 2 阶段新增接口
 
@@ -247,6 +282,12 @@ sudo systemctl status b519-pmp-deps.service
 sudo systemctl status b519-pmp-prepare.service
 sudo systemctl status b519-pmp-server.service
 sudo systemctl status b519-pmp-web.service
+```
+
+实时查看启动日志：
+
+```bash
+sudo journalctl -u b519-pmp-deps.service -u b519-pmp-prepare.service -u b519-pmp-server.service -u b519-pmp-web.service -f
 ```
 
 卸载：

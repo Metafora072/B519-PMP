@@ -9,6 +9,9 @@ PartOf=b519-pmp.service
 Type=simple
 User=__RUN_USER__
 Group=__RUN_GROUP__
+SyslogIdentifier=b519-pmp-web
+StandardOutput=journal
+StandardError=journal
 WorkingDirectory=__PROJECT_ROOT__/web
 Environment=NODE_ENV=production
 Environment=NEXT_TELEMETRY_DISABLED=1
