@@ -81,12 +81,16 @@ export class TasksService {
     const pageSize = query.pageSize ?? 20;
     const keyword = query.keyword?.trim();
 
-    const where: Prisma.TaskWhereInput = {
+    const where = {
       projectId,
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
       ...(query.priority ? { priority: query.priority } : {}),
-      ...(query.moduleId ? { moduleId: parseBigIntId(query.moduleId, "moduleId") } : {}),
+      ...(query.moduleId
+        ? query.moduleId === "none"
+          ? { moduleId: null as never }
+          : { moduleId: parseBigIntId(query.moduleId, "moduleId") }
+        : {}),
       ...(query.assigneeId ? { assigneeId: parseBigIntId(query.assigneeId, "assigneeId") } : {}),
       ...(keyword
         ? {
@@ -97,7 +101,7 @@ export class TasksService {
             ],
           }
         : {}),
-    };
+    } satisfies Prisma.TaskWhereInput;
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.task.count({ where }),
@@ -125,7 +129,11 @@ export class TasksService {
     const projectId = parseBigIntId(projectIdParam, "projectId");
     const creatorId = parseBigIntId(currentUserId, "userId");
     await this.projectsService.assertProjectMember(projectId, currentUserId);
-    await this.ensureModuleBelongsToProject(dto.moduleId, projectId, currentUserId);
+
+    const moduleId = dto.moduleId ? parseBigIntId(dto.moduleId, "moduleId") : null;
+    if (dto.moduleId) {
+      await this.ensureModuleBelongsToProject(dto.moduleId, projectId, currentUserId);
+    }
 
     const assigneeId = dto.assigneeId ? parseBigIntId(dto.assigneeId, "assigneeId") : null;
     if (assigneeId) {
@@ -154,7 +162,7 @@ export class TasksService {
       const task = await tx.task.create({
         data: {
           projectId,
-          moduleId: parseBigIntId(dto.moduleId, "moduleId"),
+          moduleId: moduleId as never,
           taskNo: `${project.projectKey}-${project.taskSeq}`,
           title: dto.title,
           description: normalizeOptionalString(dto.description),
@@ -172,7 +180,7 @@ export class TasksService {
           prUrl: normalizeOptionalString(dto.prUrl),
           issueUrl: normalizeOptionalString(dto.issueUrl),
           estimateHours: dto.estimateHours ?? null,
-        },
+        } as Prisma.TaskUncheckedCreateInput,
         select: taskSelect,
       });
 
@@ -235,7 +243,9 @@ export class TasksService {
         id: task.id,
       },
       data: {
-        ...(dto.moduleId ? { moduleId: parseBigIntId(dto.moduleId, "moduleId") } : {}),
+        ...(dto.moduleId !== undefined
+          ? { moduleId: (dto.moduleId ? parseBigIntId(dto.moduleId, "moduleId") : null) as never }
+          : {}),
         ...(dto.title ? { title: dto.title } : {}),
         ...(dto.description !== undefined ? { description: normalizeOptionalString(dto.description) } : {}),
         ...(dto.type ? { type: dto.type } : {}),
@@ -251,7 +261,7 @@ export class TasksService {
         ...(dto.prUrl !== undefined ? { prUrl: normalizeOptionalString(dto.prUrl) } : {}),
         ...(dto.issueUrl !== undefined ? { issueUrl: normalizeOptionalString(dto.issueUrl) } : {}),
         ...(dto.estimateHours !== undefined ? { estimateHours: dto.estimateHours } : {}),
-      },
+      } as Prisma.TaskUncheckedUpdateInput,
       select: taskSelect,
     });
 

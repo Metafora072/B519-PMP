@@ -51,7 +51,7 @@ export function TaskTable({ data, onOpenTask, onPageChange }: TaskTableProps) {
                   <td className="px-5 py-4">
                     <TaskPriorityBadge priority={task.priority} />
                   </td>
-                  <td className="px-5 py-4 text-sm text-[#4e5969]">{task.module.name}</td>
+                  <td className="px-5 py-4 text-sm text-[#4e5969]">{task.module?.name ?? "未分类"}</td>
                   <td className="px-5 py-4 text-sm text-[#4e5969]">{task.assignee?.name ?? "未分配"}</td>
                   <td className="px-5 py-4 text-sm text-[#4e5969]">{formatDate(task.dueAt)}</td>
                   <td className="px-5 py-4 text-sm text-[#8b95a7]">{formatDateTime(task.updatedAt)}</td>

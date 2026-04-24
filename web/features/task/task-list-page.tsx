@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, KanbanSquare, ListFilter, Plus } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Layers3, ListFilter, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ModuleCreateDialog } from "@/features/module/module-create-dialog";
 import { ProjectViewTabs } from "@/features/project/project-view-tabs";
 import { TaskCreateDialog } from "@/features/task/task-create-dialog";
 import { TaskDetailDrawer } from "@/features/task/task-detail-drawer";
@@ -27,6 +28,7 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
   const { filters, queryFilters, resetFilters, updateFilter } = useTaskFilters();
   const openDrawer = useTaskDrawerStore((state) => state.openDrawer);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createModuleOpen, setCreateModuleOpen] = useState(false);
 
   const projectQuery = useProjectQuery(projectId);
   const membersQuery = useProjectMembersQuery(projectId);
@@ -69,6 +71,10 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
                 切换到看板
               </Button>
             </Link>
+            <Button variant="outline" onClick={() => setCreateModuleOpen(true)}>
+              <Layers3 className="mr-2 h-4 w-4" />
+              新建模块
+            </Button>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               新建任务
@@ -108,6 +114,11 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
         modules={modules}
         members={members}
         onClose={() => setCreateDialogOpen(false)}
+      />
+      <ModuleCreateDialog
+        open={createModuleOpen}
+        projectId={projectId}
+        onClose={() => setCreateModuleOpen(false)}
       />
     </div>
   );

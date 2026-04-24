@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, FolderKanban, UserRound, X } from "lucide-react";
 
+import { TaskActivityTimeline } from "@/features/task/task-activity-timeline";
 import { Button } from "@/components/ui/button";
+import { TaskCommentsSection } from "@/features/task/task-comments-section";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,7 +60,7 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
 
     setTitle(taskQuery.data.title);
     setDescription(taskQuery.data.description ?? "");
-    setModuleId(taskQuery.data.moduleId);
+    setModuleId(taskQuery.data.moduleId ?? "");
     setDueAt(toDateTimeLocalValue(taskQuery.data.dueAt));
     setMessage("");
     setErrorMessage("");
@@ -175,6 +177,7 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-[#1f2329]">模块</label>
                   <Select value={moduleId} onChange={(event) => setModuleId(event.target.value)}>
+                    <option value="">未分类</option>
                     {modules.map((moduleItem) => (
                       <option key={moduleItem.id} value={moduleItem.id}>
                         {moduleItem.name}
@@ -265,12 +268,15 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
                     <FolderKanban className="h-4 w-4" />
                     当前模块
                   </div>
-                  <p className="mt-2 font-medium text-[#1f2329]">{taskQuery.data.module.name}</p>
+                  <p className="mt-2 font-medium text-[#1f2329]">{taskQuery.data.module?.name ?? "未分类"}</p>
                 </div>
               </div>
 
               {message ? <p className="text-sm text-[#00a870]">{message}</p> : null}
               {errorMessage ? <p className="text-sm text-[#d83931]">{errorMessage}</p> : null}
+
+              <TaskCommentsSection taskId={taskId} />
+              <TaskActivityTimeline taskId={taskId} />
             </>
           )}
         </div>

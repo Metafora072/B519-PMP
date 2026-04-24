@@ -13,7 +13,7 @@ export class ListProjectTasksDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\d+$/)
+  @Matches(/^(?:\d+|none)$/)
   @Transform(({ value }) => value?.trim())
   moduleId?: string;
 
@@ -41,4 +41,3 @@ export class ListProjectTasksDto {
   @Max(100)
   pageSize?: number;
 }
-

@@ -73,7 +73,7 @@ export type ProjectModule = {
 export type TaskRecord = {
   id: string;
   projectId: string;
-  moduleId: string;
+  moduleId: string | null;
   taskNo: string;
   parentTaskId: string | null;
   title: string;
@@ -99,7 +99,7 @@ export type TaskRecord = {
     id: string;
     name: string;
     color: string | null;
-  };
+  } | null;
   project: {
     id: string;
     name: string;
@@ -140,8 +140,15 @@ export type CreateProjectInput = {
   description?: string;
 };
 
+export type CreateModuleInput = {
+  name: string;
+  description?: string;
+  color?: string;
+  sortOrder?: number;
+};
+
 export type CreateTaskInput = {
-  moduleId: string;
+  moduleId?: string;
   title: string;
   description?: string;
   status?: TaskStatus;
@@ -153,7 +160,7 @@ export type CreateTaskInput = {
 export type UpdateTaskInput = {
   title?: string;
   description?: string | null;
-  moduleId?: string;
+  moduleId?: string | null;
   dueAt?: string | null;
 };
 
@@ -162,4 +169,55 @@ export type ProjectTaskSummary = {
   inProgress: number;
   completed: number;
   overdue: number;
+};
+
+export type TaskCommentRecord = {
+  id: string;
+  taskId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  user: UserProfile;
+};
+
+export type CreateCommentInput = {
+  content: string;
+};
+
+export type UpdateCommentInput = {
+  content: string;
+};
+
+export type TaskActivityRecord = {
+  id: string;
+  projectId: string;
+  taskId: string;
+  operatorId: string;
+  actionType: string;
+  actionDetail: Record<string, unknown> | null;
+  createdAt: string;
+  operator: UserProfile;
+  task: {
+    id: string;
+    taskNo: string;
+    title: string;
+  };
+};
+
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type PaginatedActivities = {
+  items: TaskActivityRecord[];
+  pagination: PaginationMeta;
+};
+
+export type ActivityListFilters = {
+  page?: number;
+  pageSize?: number;
 };

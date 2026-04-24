@@ -13,10 +13,11 @@ import {
 } from "class-validator";
 
 export class CreateTaskDto {
+  @IsOptional()
   @IsString()
   @Matches(/^\d+$/)
-  @Transform(({ value }) => value.trim())
-  moduleId!: string;
+  @Transform(({ value }) => value?.trim())
+  moduleId?: string;
 
   @IsString()
   @MinLength(2)
@@ -96,4 +97,3 @@ export class CreateTaskDto {
   @Transform(({ value }) => (value === undefined ? undefined : Number(value)))
   estimateHours?: number;
 }
-

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { ModuleCreateDialog } from "@/features/module/module-create-dialog";
 import {
   invalidateProjectTaskData,
   syncTaskAfterMutation,
@@ -40,6 +41,7 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
 
   const [filters, setFilters] = useState(initialFilters);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createModuleOpen, setCreateModuleOpen] = useState(false);
   const [createDefaultStatus, setCreateDefaultStatus] = useState<TaskStatus>("TODO");
   const debouncedKeyword = useDebouncedValue(filters.keyword, 250);
   const queryFilters = useMemo(
@@ -141,6 +143,7 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
         onFilterChange={updateFilter}
         onReset={resetFilters}
         onCreateTask={handleOpenCreateDialog}
+        onCreateModule={() => setCreateModuleOpen(true)}
       />
 
       {boardQuery.isLoading ? (
@@ -187,6 +190,11 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
         members={members}
         defaultStatus={createDefaultStatus}
         onClose={() => setCreateDialogOpen(false)}
+      />
+      <ModuleCreateDialog
+        open={createModuleOpen}
+        projectId={projectId}
+        onClose={() => setCreateModuleOpen(false)}
       />
     </div>
   );

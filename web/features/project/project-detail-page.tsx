@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, KanbanSquare, LayoutList, Sparkles, Users } from "lucide-react";
+import { ArrowRight, KanbanSquare, LayoutList, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleSummaryList } from "@/features/module/module-summary-list";
+import { ProjectActivityFeed } from "@/features/project/project-activity-feed";
 import { ProjectViewTabs } from "@/features/project/project-view-tabs";
 import {
   useProjectMembersQuery,
@@ -19,12 +20,6 @@ import { formatDateTime, getInitials } from "@/lib/format";
 type ProjectDetailPageProps = {
   projectId: string;
 };
-
-const activityPlaceholders = [
-  "活动日志接口暂未接入，当前保留占位区，后续可以直接替换为真实动态流。",
-  "已完成项目、模块、任务基础联调，适合下一阶段接评论与活动日志。",
-  "建议下一步把任务变更明细、负责人变更记录和评论串在这里展示。",
-];
 
 export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const projectQuery = useProjectQuery(projectId);
@@ -135,25 +130,10 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
         ))}
       </section>
 
-      <ModuleSummaryList modules={modules} />
+      <ModuleSummaryList projectId={project.id} modules={modules} />
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-[#e8edf4]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <p className="text-sm text-[#8b95a7]">最近动态</p>
-              <CardTitle className="mt-1">占位区已准备好承接 activity log</CardTitle>
-            </div>
-            <Sparkles className="h-5 w-5 text-[#3370ff]" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {activityPlaceholders.map((item) => (
-              <div key={item} className="rounded-[20px] bg-[#f8faff] px-4 py-4 text-sm leading-7 text-[#646a73]">
-                {item}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <ProjectActivityFeed projectId={project.id} />
 
         <Card className="border-[#e8edf4]">
           <CardHeader>
@@ -163,7 +143,7 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
           <CardContent className="space-y-3 text-sm leading-7 text-[#646a73]">
             <p>项目详情页已串起项目基础信息、成员、模块与任务统计。</p>
             <p>任务统计通过真实任务接口汇总得到，不再依赖静态 mock。</p>
-            <p>当前已具备概览、列表、看板三种主视图，后续可以继续补评论与活动日志。</p>
+            <p>最近动态已经接入真实 activity feed，后续可以继续扩展完整动态页与统计视图。</p>
           </CardContent>
         </Card>
       </section>

@@ -37,8 +37,32 @@
 - 看板页接入轻量搜索与筛选，支持按关键字、优先级、模块、负责人过滤任务
 - 看板卡片复用现有任务详情抽屉，点击卡片即可打开右侧详情并继续编辑
 - 新增任务创建弹窗，支持在看板工具栏和列头快速创建任务
+- 任务创建与编辑已放宽为“模块可选”，未分类任务可直接创建、展示与筛选
 - 拖拽改状态采用前端乐观更新，请求失败时自动回滚并通过 toast 提示错误
 - 拖拽与编辑成功后同步刷新任务列表缓存、看板缓存、任务详情缓存与项目统计缓存
+
+## 第 5 阶段第 1 步已完成
+
+- 新增 `comments` 后端模块，补齐任务评论查询、创建、编辑、删除接口
+- 新增 `activity-logs` 后端模块，补齐任务维度与项目维度活动日志查询接口
+- 所有评论与活动日志接口统一接入 JWT 鉴权和项目成员权限校验
+- 评论默认按 `createdAt` 升序返回，评论作者本人或项目管理员才可编辑/删除
+- 评论写操作会继续写入 `task_activity_logs`，与现有任务变更日志结构兼容
+- 活动日志查询支持 `page`、`pageSize` 分页参数
+
+## 第 5 阶段第 2 步已完成
+
+- 任务详情抽屉接入评论区与活动日志时间线
+- 评论区支持列表展示、发送、编辑自己的评论、删除自己的评论
+- 评论发送成功后自动刷新评论列表与活动日志
+- 活动日志已接入轻量 timeline，对常见 `action_type` 做可读化展示
+
+## 第 5 阶段第 3 步已完成
+
+- 项目详情页最近动态占位区已替换为真实 project activity feed
+- 接入 `GET /api/projects/:id/activities`，默认展示最近 12 条动态
+- 动态项展示操作人、动作、关联任务与时间，并保留“查看更多”入口占位
+- 复用任务活动日志的 action 文案格式化逻辑，保持任务抽屉与项目概览页一致
 
 ## 第 3 阶段新增路由
 
@@ -49,6 +73,37 @@
 ## 第 4 阶段新增路由
 
 - `/projects/:id/board`
+
+## 第 5 阶段第 1 步新增接口
+
+- `GET /api/tasks/:id/comments`
+- `POST /api/tasks/:id/comments`
+- `PATCH /api/comments/:id`
+- `DELETE /api/comments/:id`
+- `GET /api/tasks/:id/activities`
+- `GET /api/projects/:id/activities`
+
+## 第 5 阶段第 2 步新增组件
+
+- `web/features/task/task-comments-section.tsx`
+- `web/features/task/task-comment-item.tsx`
+- `web/features/task/task-comment-editor.tsx`
+- `web/features/task/task-activity-timeline.tsx`
+- `web/features/task/task-activity-item.tsx`
+
+## 第 5 阶段第 2 步使用接口
+
+- `GET /api/tasks/:id/comments`
+- `POST /api/tasks/:id/comments`
+- `PATCH /api/comments/:id`
+- `DELETE /api/comments/:id`
+- `GET /api/tasks/:id/activities`
+
+## 第 5 阶段第 3 步复用组件/工具
+
+- `web/features/task/activity-presenter.ts`
+- `web/features/project/queries.ts` 中的 `useProjectActivitiesQuery`
+- `web/services/activities.ts` 中的 `getProjectActivities`
 
 ## 第 3 阶段核心组件
 
@@ -83,9 +138,17 @@
 
 ## 下一阶段建议
 
-- 评论：接入任务评论流，支持任务内协作闭环
-- 活动日志：把后端 activity log 前端化，替换详情页占位动态区
+- 动态页：把“查看更多”落成完整项目活动页，支持分页与筛选
+- 评论增强：补评论回复、@ 成员和发送态优化
 - 统计：增加项目燃尽、负责人负载、模块进展等轻量分析卡片
+
+## 联调建议
+
+- 先用已有任务详情抽屉接 `GET /api/tasks/:id/comments` 和 `POST /api/tasks/:id/comments`，优先打通评论流
+- 评论列表可直接按接口返回顺序渲染，无需前端二次排序
+- 任务详情中的“最近动态”建议优先接 `GET /api/tasks/:id/activities?page=1&pageSize=20`
+- 项目详情页动态占位区可替换为 `GET /api/projects/:id/activities?page=1&pageSize=20`
+- 前端在删除评论前可增加二次确认，删除成功后刷新评论列表与任务活动日志
 
 ## 第 2 阶段新增接口
 

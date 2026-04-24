@@ -68,6 +68,7 @@ export function TaskFiltersBar({
           onChange={(event) => onFilterChange("moduleId", event.target.value || undefined)}
         >
           <option value="">全部模块</option>
+          <option value="none">未分类</option>
           {modules.map((moduleItem) => (
             <option key={moduleItem.id} value={moduleItem.id}>
               {moduleItem.name}

@@ -54,8 +54,6 @@ export function TaskCreateDialog({
   const createTaskMutation = useCreateTaskMutation(projectId);
   const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState<TaskCreateFormState>(() => buildInitialState(modules, defaultStatus));
-
-  const hasModules = modules.length > 0;
   const dialogState = useMemo(() => buildInitialState(modules, defaultStatus), [defaultStatus, modules]);
 
   useEffect(() => {
@@ -75,7 +73,7 @@ export function TaskCreateDialog({
       await createTaskMutation.mutateAsync({
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        moduleId: formData.moduleId,
+        moduleId: formData.moduleId || undefined,
         priority: formData.priority,
         status: formData.status,
         assigneeId: formData.assigneeId || undefined,
@@ -106,12 +104,7 @@ export function TaskCreateDialog({
           </Button>
         </div>
 
-        {!hasModules ? (
-          <div className="mt-6 rounded-[22px] border border-dashed border-[#d7dce5] bg-[#fbfcff] px-5 py-6 text-sm leading-7 text-[#646a73]">
-            当前项目还没有模块。请先在数据库里补充模块，或接下阶段的模块创建入口后再新建任务。
-          </div>
-        ) : (
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium text-[#1f2329]">标题</label>
               <Input
@@ -139,6 +132,7 @@ export function TaskCreateDialog({
                   value={formData.moduleId}
                   onChange={(event) => setFormData((prev) => ({ ...prev, moduleId: event.target.value }))}
                 >
+                  <option value="">未分类</option>
                   {modules.map((moduleItem) => (
                     <option key={moduleItem.id} value={moduleItem.id}>
                       {moduleItem.name}
@@ -214,8 +208,7 @@ export function TaskCreateDialog({
                 {createTaskMutation.isPending ? "创建中..." : "创建任务"}
               </Button>
             </div>
-          </form>
-        )}
+        </form>
       </div>
     </div>
   );

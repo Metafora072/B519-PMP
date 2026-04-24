@@ -42,9 +42,9 @@ function TaskBoardCardBase({ task, onOpenTask, isDragging, overlay }: TaskBoardC
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Badge variant="secondary" className="gap-1.5">
+        <Badge variant={task.module ? "secondary" : "outline"} className="gap-1.5">
           <FolderKanban className="h-3.5 w-3.5" />
-          {task.module.name}
+          {task.module?.name ?? "未分类"}
         </Badge>
         <TaskPriorityBadge priority={task.priority} />
       </div>

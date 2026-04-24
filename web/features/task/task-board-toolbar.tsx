@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, KanbanSquare, Plus, Search } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Layers3, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ type TaskBoardToolbarProps = {
   onFilterChange: (key: keyof TaskBoardFilters, value: string | undefined) => void;
   onReset: () => void;
   onCreateTask: (status?: TaskStatus) => void;
+  onCreateModule: () => void;
 };
 
 export function TaskBoardToolbar({
@@ -31,6 +32,7 @@ export function TaskBoardToolbar({
   onFilterChange,
   onReset,
   onCreateTask,
+  onCreateModule,
 }: TaskBoardToolbarProps) {
   return (
     <section className="rounded-[32px] border border-[#e8edf4] bg-[linear-gradient(135deg,#ffffff_0%,#f7faff_46%,#eef4ff_100%)] p-7 shadow-[0_18px_40px_rgba(31,35,41,0.05)]">
@@ -62,6 +64,10 @@ export function TaskBoardToolbar({
             <Link href={`/projects/${projectId}/tasks`}>
               <Button variant="outline">切换到任务列表</Button>
             </Link>
+            <Button variant="outline" onClick={onCreateModule}>
+              <Layers3 className="mr-2 h-4 w-4" />
+              新建模块
+            </Button>
             <Button onClick={() => onCreateTask()}>
               <Plus className="mr-2 h-4 w-4" />
               新建任务
@@ -91,6 +97,7 @@ export function TaskBoardToolbar({
 
           <Select value={filters.moduleId ?? ""} onChange={(event) => onFilterChange("moduleId", event.target.value || undefined)}>
             <option value="">全部模块</option>
+            <option value="none">未分类</option>
             {modules.map((moduleItem) => (
               <option key={moduleItem.id} value={moduleItem.id}>
                 {moduleItem.name}

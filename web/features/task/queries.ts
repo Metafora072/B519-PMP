@@ -2,6 +2,13 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { getTaskActivities } from "@/services/activities";
+import {
+  createTaskComment,
+  deleteTaskComment,
+  getTaskComments,
+  updateTaskComment,
+} from "@/services/comments";
 import { queryKeys } from "@/services/query-keys";
 import {
   createTask,
@@ -15,13 +22,18 @@ import {
 } from "@/services/tasks";
 
 import type {
+  ActivityListFilters,
+  CreateCommentInput,
   CreateTaskInput,
+  PaginatedActivities,
   PaginatedTasks,
   TaskBoardFilters,
+  TaskCommentRecord,
   TaskListFilters,
   TaskPriority,
   TaskRecord,
   TaskStatus,
+  UpdateCommentInput,
   UpdateTaskInput,
 } from "@/services/types";
 
@@ -46,7 +58,16 @@ export function invalidateProjectTaskData(
 
   if (taskId) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+    void queryClient.invalidateQueries({ queryKey: ["tasks", taskId, "activities"] });
   }
+}
+
+export function invalidateTaskCollaborationData(
+  queryClient: ReturnType<typeof useQueryClient>,
+  taskId: string,
+) {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.comments(taskId) });
+  void queryClient.invalidateQueries({ queryKey: ["tasks", taskId, "activities"] });
 }
 
 export function updateTaskInProjectTaskCaches(
@@ -121,6 +142,26 @@ export function useTaskDetailQuery(taskId?: string | null) {
   });
 }
 
+export function useTaskCommentsQuery(taskId?: string | null) {
+  return useQuery({
+    queryKey: queryKeys.tasks.comments(taskId ?? ""),
+    queryFn: () => getTaskComments(taskId as string),
+    enabled: Boolean(taskId),
+  });
+}
+
+export function useTaskActivitiesQuery(
+  taskId?: string | null,
+  filters: ActivityListFilters = { page: 1, pageSize: 20 },
+) {
+  return useQuery({
+    queryKey: queryKeys.tasks.activities(taskId ?? "", filters),
+    queryFn: () => getTaskActivities(taskId as string, filters),
+    enabled: Boolean(taskId),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useCreateTaskMutation(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -138,7 +179,10 @@ export function useUpdateTaskMutation(projectId: string, taskId: string) {
 
   return useMutation({
     mutationFn: (input: UpdateTaskInput) => updateTask(taskId, input),
-    onSuccess: (task) => syncTaskAfterMutation(queryClient, projectId, task),
+    onSuccess: (task) => {
+      syncTaskAfterMutation(queryClient, projectId, task);
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
   });
 }
 
@@ -147,7 +191,10 @@ export function useUpdateTaskStatusMutation(projectId: string, taskId: string) {
 
   return useMutation({
     mutationFn: (status: TaskStatus) => updateTaskStatus(taskId, status),
-    onSuccess: (task) => syncTaskAfterMutation(queryClient, projectId, task),
+    onSuccess: (task) => {
+      syncTaskAfterMutation(queryClient, projectId, task);
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
   });
 }
 
@@ -156,7 +203,10 @@ export function useUpdateTaskPriorityMutation(projectId: string, taskId: string)
 
   return useMutation({
     mutationFn: (priority: TaskPriority) => updateTaskPriority(taskId, priority),
-    onSuccess: (task) => syncTaskAfterMutation(queryClient, projectId, task),
+    onSuccess: (task) => {
+      syncTaskAfterMutation(queryClient, projectId, task);
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
   });
 }
 
@@ -165,6 +215,52 @@ export function useUpdateTaskAssigneeMutation(projectId: string, taskId: string)
 
   return useMutation({
     mutationFn: (assigneeId: string | null) => updateTaskAssignee(taskId, assigneeId),
-    onSuccess: (task) => syncTaskAfterMutation(queryClient, projectId, task),
+    onSuccess: (task) => {
+      syncTaskAfterMutation(queryClient, projectId, task);
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
+  });
+}
+
+export function useCreateTaskCommentMutation(taskId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCommentInput) => createTaskComment(taskId, input),
+    onSuccess: (comment) => {
+      queryClient.setQueryData(queryKeys.tasks.comments(taskId), (current: TaskCommentRecord[] | undefined) =>
+        current ? [...current, comment] : [comment],
+      );
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
+  });
+}
+
+export function useUpdateTaskCommentMutation(taskId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ commentId, input }: { commentId: string; input: UpdateCommentInput }) =>
+      updateTaskComment(commentId, input),
+    onSuccess: (comment) => {
+      queryClient.setQueryData(queryKeys.tasks.comments(taskId), (current: TaskCommentRecord[] | undefined) =>
+        current ? current.map((item) => (item.id === comment.id ? comment : item)) : [comment],
+      );
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
+  });
+}
+
+export function useDeleteTaskCommentMutation(taskId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (commentId: string) => deleteTaskComment(commentId),
+    onSuccess: (_result, commentId) => {
+      queryClient.setQueryData(queryKeys.tasks.comments(taskId), (current: TaskCommentRecord[] | undefined) =>
+        current ? current.filter((item) => item.id !== commentId) : current,
+      );
+      invalidateTaskCollaborationData(queryClient, taskId);
+    },
   });
 }
