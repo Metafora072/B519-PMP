@@ -7,7 +7,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberChip } from "@/features/member/member-chip";
-import { MemberGroup } from "@/features/member/member-group";
 import { ModuleSummaryList } from "@/features/module/module-summary-list";
 import { ProjectActivityFeed } from "@/features/project/project-activity-feed";
 import { ProjectJoinPolicyBadge } from "@/features/project/project-join-policy-badge";
@@ -58,6 +57,8 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
   const workloads = workloadsQuery.data ?? [];
   const summary = summaryQuery.data ?? { total: 0, inProgress: 0, completed: 0, overdue: 0 };
   const canManageMembers = project.viewerMembership?.role === "OWNER" || project.viewerMembership?.role === "ADMIN";
+  const ownerMember = members.find((member) => member.user.id === project.owner.id) ?? null;
+  const otherMembers = members.filter((member) => member.user.id !== project.owner.id);
 
   return (
     <>
@@ -90,37 +91,33 @@ export function ProjectDetailPage({ projectId }: ProjectDetailPageProps) {
             </div>
 
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <MemberChip
-                  memberKey={project.owner.id}
-                  name={project.owner.name}
-                  avatarUrl={project.owner.avatarUrl}
-                  meta="Owner"
-                />
-                {members
-                  .filter((member) => member.role === "ADMIN")
-                  .slice(0, 2)
-                  .map((member) => (
-                    <MemberChip
-                      key={member.id}
-                      memberKey={member.user.id}
-                      name={member.user.name}
-                      avatarUrl={member.user.avatarUrl}
-                      meta="Admin"
-                      compact
-                    />
-                  ))}
+              <div className="flex flex-wrap items-center gap-2">
+                {ownerMember ? (
+                  <MemberChip
+                    memberKey={ownerMember.user.id}
+                    name={ownerMember.user.name}
+                    avatarUrl={ownerMember.user.avatarUrl}
+                    meta="Owner"
+                  />
+                ) : null}
+                {otherMembers.map((member) => (
+                  <MemberChip
+                    key={member.id}
+                    memberKey={member.user.id}
+                    name={member.user.name}
+                    avatarUrl={member.user.avatarUrl}
+                    meta={
+                      member.role === "ADMIN"
+                        ? "Admin"
+                        : member.role === "GUEST"
+                          ? "Guest"
+                          : "Member"
+                    }
+                    compact
+                  />
+                ))}
               </div>
-              <div className="flex items-center gap-3">
-                <MemberGroup
-                  members={members.map((member) => ({
-                    id: member.user.id,
-                    name: member.user.name,
-                    avatarUrl: member.user.avatarUrl,
-                  }))}
-                />
-                <p className="text-sm text-[#646a73]">项目成员一眼可见，负责人负载见下方概览。</p>
-              </div>
+              <p className="text-sm text-[#646a73]">项目成员在这里直接展开显示，负责人负载见下方概览。</p>
             </div>
 
             <ProjectViewTabs projectId={project.id} current="overview" />

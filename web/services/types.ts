@@ -8,6 +8,15 @@ export type ProjectJoinAction = "JOIN" | "REQUEST" | "INVITED" | "PENDING" | nul
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CLOSED";
 export type TaskPriority = "P0" | "P1" | "P2" | "P3";
 export type TaskType = "REQUIREMENT" | "BUG" | "IMPROVEMENT" | "TECH_DEBT" | "RESEARCH";
+export type NotificationType =
+  | "TASK_ASSIGNED"
+  | "TASK_REASSIGNED"
+  | "COMMENT_MENTION"
+  | "PROJECT_JOIN_REQUEST"
+  | "PROJECT_JOIN_APPROVED"
+  | "PROJECT_JOIN_REJECTED"
+  | "PROJECT_INVITED"
+  | "TASK_OVERDUE";
 
 export type UserProfile = {
   id: string;
@@ -61,6 +70,7 @@ export type ProjectSummary = {
     status: ProjectMemberStatus;
     joinedAt: string | null;
     displayColorToken: string | null;
+    user: UserProfile;
   }>;
   memberCount: number;
   pendingMemberCount: number;
@@ -263,10 +273,12 @@ export type TaskCommentRecord = {
 
 export type CreateCommentInput = {
   content: string;
+  mentionUserIds?: string[];
 };
 
 export type UpdateCommentInput = {
   content: string;
+  mentionUserIds?: string[];
 };
 
 export type TaskActivityRecord = {
@@ -300,4 +312,65 @@ export type PaginatedActivities = {
 export type ActivityListFilters = {
   page?: number;
   pageSize?: number;
+};
+
+export type WorkbenchSummary = {
+  assigned: number;
+  created: number;
+  watching: number;
+  pendingActions: number;
+  overdue: number;
+  dueToday: number;
+  highPriority: number;
+};
+
+export type WorkbenchTaskScope =
+  | "assigned"
+  | "created"
+  | "watching"
+  | "overdue"
+  | "dueToday"
+  | "highPriority";
+
+export type PendingActionRecord = {
+  id: string;
+  type: "PROJECT_JOIN_REQUEST";
+  createdAt: string;
+  membershipId: string;
+  project: {
+    id: string;
+    name: string;
+    projectKey: string;
+  };
+  requester: UserProfile;
+};
+
+export type NotificationRecord = {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  content: string | null;
+  relatedProjectId: string | null;
+  relatedTaskId: string | null;
+  actorId: string | null;
+  isRead: boolean;
+  metadataJson: Record<string, unknown> | null;
+  createdAt: string;
+  actor: UserProfile | null;
+  project: {
+    id: string;
+    name: string;
+    projectKey: string;
+  } | null;
+  task: {
+    id: string;
+    taskNo: string;
+    title: string;
+  } | null;
+};
+
+export type PaginatedNotifications = {
+  items: NotificationRecord[];
+  pagination: PaginationMeta;
 };

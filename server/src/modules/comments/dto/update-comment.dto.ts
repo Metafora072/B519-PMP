@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsString, MaxLength, MinLength } from "class-validator";
+import { IsArray, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 
 export class UpdateCommentDto {
   @IsString()
@@ -7,4 +7,10 @@ export class UpdateCommentDto {
   @MaxLength(5000)
   @Transform(({ value }) => value.trim())
   content!: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Matches(/^\d+$/, { each: true })
+  mentionUserIds?: string[];
 }

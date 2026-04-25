@@ -24,4 +24,13 @@ export const queryKeys = {
     activities: (taskId: string, filters: Record<string, unknown>) =>
       ["tasks", taskId, "activities", filters] as const,
   },
+  me: {
+    workbenchSummary: ["me", "workbench", "summary"] as const,
+    tasks: (scope: string) => ["me", "tasks", scope] as const,
+    pendingActions: ["me", "pending-actions"] as const,
+  },
+  notifications: {
+    list: (filters: Record<string, unknown>) => ["notifications", filters] as const,
+    unreadCount: ["notifications", "unread-count"] as const,
+  },
 };

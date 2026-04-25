@@ -13,6 +13,7 @@ import { TaskCreateDialog } from "@/features/task/task-create-dialog";
 import { TaskDetailDrawer } from "@/features/task/task-detail-drawer";
 import { TaskFiltersBar } from "@/features/task/task-filters-bar";
 import { TaskGroupSwitcher } from "@/features/task/task-group-switcher";
+import { useTaskGroupCollapse } from "@/features/task/hooks/use-task-group-collapse";
 import { TaskListGroupedByAssignee } from "@/features/task/task-list-grouped-by-assignee";
 import { TaskTable } from "@/features/task/task-table";
 import { useTaskFilters } from "@/hooks/use-task-filters";
@@ -69,6 +70,7 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createModuleOpen, setCreateModuleOpen] = useState(false);
   const [groupMode, setGroupMode] = useState<TaskGroupMode>("assignee");
+  const { isCollapsed: isFallbackGroupCollapsed, toggleGroup: toggleFallbackGroup } = useTaskGroupCollapse();
 
   const projectQuery = useProjectQuery(projectId);
   const membersQuery = useProjectMembersQuery(projectId);
@@ -108,6 +110,8 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
             key={group.key}
             title={group.title}
             tasks={group.tasks}
+            collapsed={isFallbackGroupCollapsed(`${groupMode}-${group.key}`)}
+            onToggle={() => toggleFallbackGroup(`${groupMode}-${group.key}`)}
             onOpenTask={(task) => openDrawer({ projectId, taskId: task.id })}
           />
         ))}

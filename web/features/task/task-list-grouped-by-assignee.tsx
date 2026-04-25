@@ -1,5 +1,6 @@
 "use client";
 
+import { useTaskGroupCollapse } from "@/features/task/hooks/use-task-group-collapse";
 import { TaskAssigneeGroupSection } from "@/features/task/task-assignee-group-section";
 
 import type { PaginatedTasks, TaskRecord } from "@/services/types";
@@ -56,19 +57,26 @@ export function TaskListGroupedByAssignee({
   onOpenTask,
 }: TaskListGroupedByAssigneeProps) {
   const groups = groupTasksByAssignee(data.items);
+  const { isCollapsed, toggleGroup } = useTaskGroupCollapse();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {groups.length > 0 ? (
-        groups.map((group) => (
-          <TaskAssigneeGroupSection
-            key={group.assignee?.id ?? "unassigned"}
-            title={group.title}
-            assignee={group.assignee}
-            tasks={group.tasks}
-            onOpenTask={onOpenTask}
-          />
-        ))
+        groups.map((group) => {
+          const groupKey = group.assignee?.id ?? "unassigned";
+
+          return (
+            <TaskAssigneeGroupSection
+              key={groupKey}
+              title={group.title}
+              assignee={group.assignee}
+              tasks={group.tasks}
+              collapsed={isCollapsed(groupKey)}
+              onToggle={() => toggleGroup(groupKey)}
+              onOpenTask={onOpenTask}
+            />
+          );
+        })
       ) : (
         <div className="rounded-[28px] border border-dashed border-[#d7dce5] bg-white p-8 text-sm text-[#8b95a7]">
           当前筛选条件下没有任务。

@@ -5,10 +5,18 @@ import { Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { LogoutButton } from "@/features/auth/logout-button";
+import { NotificationCenter } from "@/features/notification/notification-center";
 import { queryKeys } from "@/services/query-keys";
 import { getCurrentUser } from "@/services/auth";
 
 function getRouteMeta(pathname: string) {
+  if (pathname.startsWith("/my")) {
+    return {
+      eyebrow: "个人入口",
+      title: "我的工作台",
+    };
+  }
+
   if (pathname.startsWith("/projects/") && pathname.endsWith("/board")) {
     return {
       eyebrow: "项目看板",
@@ -38,8 +46,8 @@ function getRouteMeta(pathname: string) {
   }
 
   return {
-    eyebrow: "工作台",
-    title: "首页",
+    eyebrow: "个人入口",
+    title: "我的工作台",
   };
 }
 
@@ -64,6 +72,7 @@ export function AppHeader() {
           <span>搜索项目、任务、成员（下一阶段接入全局搜索）</span>
         </div>
         <div className="flex items-center gap-3">
+          <NotificationCenter />
           <div className="rounded-2xl border border-[#e5e6eb] bg-[#fbfcfe] px-4 py-2 text-sm text-[#646a73]">
             {currentUserQuery.data?.name ?? "当前成员"}
           </div>

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 
 import { parseBigIntId } from "../../common/utils/parse-bigint-id";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { ProjectsService } from "../projects/projects.service";
 import { userProfileSelect } from "../users/users.service";
 import { CreateCommentDto } from "./dto/create-comment.dto";
@@ -25,6 +26,7 @@ export class CommentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listTaskComments(taskIdParam: string, currentUserId: string) {
@@ -42,8 +44,16 @@ export class CommentsService {
   async createTaskComment(taskIdParam: string, currentUserId: string, dto: CreateCommentDto) {
     const task = await this.getAccessibleTask(taskIdParam, currentUserId);
     const userId = parseBigIntId(currentUserId, "userId");
+    const mentionUserIds = await this.resolveMentionUserIds(task.projectId, dto.mentionUserIds);
+    const operator = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
 
-    return this.prisma.$transaction(async (tx) => {
+    const comment = await this.prisma.$transaction(async (tx) => {
       const comment = await tx.taskComment.create({
         data: {
           taskId: task.id,
@@ -62,17 +72,32 @@ export class CommentsService {
           actionDetail: {
             commentId: comment.id.toString(),
             content: comment.content,
+            mentionUserIds: mentionUserIds.map((item) => item.toString()),
           } as Prisma.InputJsonValue,
         },
       });
 
       return comment;
     });
+
+    await this.notificationsService.notifyCommentMentions({
+      recipientUserIds: mentionUserIds,
+      actorId: userId,
+      actorName: operator.name,
+      projectId: task.projectId,
+      taskId: task.id,
+      taskTitle: task.title,
+      content: comment.content,
+    });
+
+    return comment;
   }
 
   async updateComment(commentIdParam: string, currentUserId: string, dto: UpdateCommentDto) {
     const comment = await this.getAccessibleComment(commentIdParam, currentUserId);
     await this.assertCommentEditable(comment.task.projectId, currentUserId, comment.userId);
+    const operatorId = parseBigIntId(currentUserId, "userId");
+    const mentionUserIds = await this.resolveMentionUserIds(comment.task.projectId, dto.mentionUserIds);
 
     if (comment.content === dto.content) {
       return this.prisma.taskComment.findUniqueOrThrow({
@@ -81,9 +106,7 @@ export class CommentsService {
       });
     }
 
-    const operatorId = parseBigIntId(currentUserId, "userId");
-
-    return this.prisma.$transaction(async (tx) => {
+    const updatedComment = await this.prisma.$transaction(async (tx) => {
       const updatedComment = await tx.taskComment.update({
         where: {
           id: comment.id,
@@ -104,12 +127,33 @@ export class CommentsService {
             commentId: comment.id.toString(),
             before: comment.content,
             after: updatedComment.content,
+            mentionUserIds: mentionUserIds.map((item) => item.toString()),
           } as Prisma.InputJsonValue,
         },
       });
 
       return updatedComment;
     });
+
+    const operator = await this.prisma.user.findUniqueOrThrow({
+      where: { id: operatorId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    await this.notificationsService.notifyCommentMentions({
+      recipientUserIds: mentionUserIds,
+      actorId: operatorId,
+      actorName: operator.name,
+      projectId: comment.task.projectId,
+      taskId: comment.task.id,
+      taskTitle: comment.task.title,
+      content: updatedComment.content,
+    });
+
+    return updatedComment;
   }
 
   async deleteComment(commentIdParam: string, currentUserId: string) {
@@ -154,6 +198,7 @@ export class CommentsService {
       select: {
         id: true,
         projectId: true,
+        title: true,
       },
     });
 
@@ -183,6 +228,7 @@ export class CommentsService {
           select: {
             id: true,
             projectId: true,
+            title: true,
           },
         },
       },
@@ -204,5 +250,18 @@ export class CommentsService {
     }
 
     await this.projectsService.assertProjectAdmin(projectId, currentUserId);
+  }
+
+  private async resolveMentionUserIds(projectId: bigint, mentionUserIds?: string[]) {
+    if (!mentionUserIds?.length) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(mentionUserIds.map((item) => parseBigIntId(item, "mentionUserId"))));
+    for (const userId of uniqueIds) {
+      await this.projectsService.assertUserIsProjectMember(projectId, userId);
+    }
+
+    return uniqueIds;
   }
 }

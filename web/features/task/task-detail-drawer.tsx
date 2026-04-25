@@ -315,7 +315,7 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
               {message ? <p className="text-sm text-[#00a870]">{message}</p> : null}
               {errorMessage ? <p className="text-sm text-[#d83931]">{errorMessage}</p> : null}
 
-              <TaskCommentsSection taskId={taskId} />
+              <TaskCommentsSection taskId={taskId} members={activeMembers} />
               <TaskActivityTimeline taskId={taskId} />
             </>
           )}

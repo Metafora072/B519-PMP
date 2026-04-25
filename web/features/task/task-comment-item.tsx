@@ -7,20 +7,22 @@ import { Button } from "@/components/ui/button";
 import { TaskCommentEditor } from "@/features/task/task-comment-editor";
 import { formatDateTime, getInitials } from "@/lib/format";
 
-import type { TaskCommentRecord } from "@/services/types";
+import type { ProjectMember, TaskCommentRecord } from "@/services/types";
 
 type TaskCommentItemProps = {
   comment: TaskCommentRecord;
   canManage: boolean;
+  members: ProjectMember[];
   isUpdating: boolean;
   isDeleting: boolean;
-  onUpdate: (commentId: string, content: string) => Promise<void>;
+  onUpdate: (commentId: string, content: string, mentionUserIds?: string[]) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
 };
 
 export function TaskCommentItem({
   comment,
   canManage,
+  members,
   isUpdating,
   isDeleting,
   onUpdate,
@@ -28,10 +30,23 @@ export function TaskCommentItem({
 }: TaskCommentItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(comment.content);
+  const [mentionUserIds, setMentionUserIds] = useState<string[]>([]);
 
   async function handleSave() {
-    await onUpdate(comment.id, draft.trim());
+    await onUpdate(comment.id, draft.trim(), mentionUserIds);
     setIsEditing(false);
+  }
+
+  function handleMentionSelect(memberId: string) {
+    const member = members.find((item) => item.user.id === memberId);
+    if (!member) {
+      return;
+    }
+
+    const mentionMatch = draft.match(/(?:^|\s)@([^\s@]*)$/);
+    const currentToken = mentionMatch?.[1] ?? "";
+    setDraft((prev) => prev.replace(new RegExp(`@${currentToken}$`), `@${member.user.name} `));
+    setMentionUserIds((prev) => Array.from(new Set([...prev, memberId])));
   }
 
   return (
@@ -56,10 +71,13 @@ export function TaskCommentItem({
                   value={draft}
                   onChange={setDraft}
                   onSubmit={handleSave}
+                  members={members}
+                  onMentionSelect={handleMentionSelect}
                   isPending={isUpdating}
                   submitLabel="保存评论"
                   onCancel={() => {
                     setDraft(comment.content);
+                    setMentionUserIds([]);
                     setIsEditing(false);
                   }}
                 />

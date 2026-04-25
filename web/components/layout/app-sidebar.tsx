@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
-import { FolderKanban, Home, Settings } from "lucide-react";
+import { BellRing, FolderKanban, Home, Settings } from "lucide-react";
 
 const navItems: Array<{
   label: string;
@@ -11,8 +11,9 @@ const navItems: Array<{
   href?: Route;
   disabled?: boolean;
 }> = [
-  { label: "首页", icon: Home, href: "/" },
+  { label: "我的工作台", icon: Home, href: "/my" },
   { label: "项目", icon: FolderKanban, href: "/projects" },
+  { label: "通知", icon: BellRing, disabled: true },
   { label: "设置", icon: Settings, disabled: true },
 ];
 
@@ -64,7 +65,7 @@ export function AppSidebar() {
       <div className="mt-auto rounded-[20px] border border-[#e5e6eb] bg-[#fbfcfe] p-4">
         <p className="text-sm font-medium text-[#1f2329]">当前阶段</p>
         <p className="mt-2 text-sm leading-6 text-[#646a73]">
-          已进入第 6 阶段，项目发现、成员管理、负责人分组任务页与负责人泳道看板均已接入真实数据。
+          已进入第 7 阶段，任务视图可保存、个人工作台与顶部通知中心都已接入真实数据。
         </p>
       </div>
     </aside>

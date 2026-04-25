@@ -77,6 +77,24 @@
 - 第 6-3 步：任务详情抽屉强化负责人位置，支持“快速分配给我”
 - 第 6-3 步：项目详情页新增负责人负载卡片，突出谁负责什么
 
+## 任务列表负责人分组专项优化已完成
+
+- `/projects/:id/tasks` 默认按负责人分组的任务区已重构为独立分组块
+- 每个负责人分组支持独立折叠 / 展开，折叠状态保存在当前页面会话的本地状态中，新出现的分组默认展开
+- 分组头集中展示负责人、任务总数、逾期数、P0、P1、进行中与已完成数量
+- 分组头与任务体使用不同背景、边框和间距，强化负责人栏与任务内容区的层级关系
+- 分组内任务项重构为可点击工作项列表，保留点击打开现有任务详情抽屉的交互
+
+## 第 7 阶段已完成
+
+- 第 7-2 步：新增 `/my` 我的工作台，跨项目聚合“指派给我 / 我创建的 / 我关注的 / 待我审批 / 逾期 / 今日到期 / 高优任务”
+- 第 7-2 步：补齐 `GET /api/me/workbench/summary`、`GET /api/me/tasks`、`GET /api/me/pending-actions`
+- 第 7-2 步：首页已重定向到 `/my`，个人入口成为默认登录后主入口
+- 第 7-3 步：新增 `notifications` 模型与通知中心，覆盖任务分配、负责人变更、评论 @、项目加入申请、审批结果、邀请加入、逾期提醒
+- 第 7-3 步：补齐 `GET /api/notifications`、`POST /api/notifications/read-all`、`POST /api/notifications/:id/read`、`GET /api/notifications/unread-count`
+- 第 7-3 步：任务评论编辑器支持 `@成员` 建议，提交后为被 @ 成员生成通知
+- 第 7-3 步：顶部栏新增通知铃铛与未读数，点击后可打开右侧通知中心并联动跳转项目或任务
+
 ## 第 3 阶段新增路由
 
 - `/projects`
@@ -90,6 +108,10 @@
 ## 第 6 阶段新增路由
 
 - `/projects/:id/members`
+
+## 第 7 阶段新增路由
+
+- `/my`
 
 ## 第 5 阶段第 1 步新增接口
 
@@ -114,6 +136,18 @@
 - `GET /api/projects/:id/tasks?viewMode=list|board`
 - `GET /api/projects/:id/tasks?includeUnassigned=true|false`
 - `GET /api/projects/:id/tasks?verticalGroupBy=status&horizontalGroupBy=assignee`
+
+## 第 7 阶段新增接口
+
+- 我的工作台
+  - `GET /api/me/workbench/summary`
+  - `GET /api/me/tasks?scope=assigned|created|watching|overdue|dueToday|highPriority`
+  - `GET /api/me/pending-actions`
+- 通知中心
+  - `GET /api/notifications`
+  - `POST /api/notifications/read-all`
+  - `POST /api/notifications/:id/read`
+  - `GET /api/notifications/unread-count`
 
 ## 第 5 阶段第 2 步新增组件
 
@@ -177,7 +211,18 @@
 - `web/features/task/task-group-switcher.tsx`
 - `web/features/task/task-list-grouped-by-assignee.tsx`
 - `web/features/task/task-assignee-group-section.tsx`
+- `web/features/task/task-assignee-group-header.tsx`
+- `web/features/task/task-assignee-group-body.tsx`
+- `web/features/task/task-row-item.tsx`
+- `web/features/task/hooks/use-task-group-collapse.ts`
 - `web/features/task/task-assignee-swimlane-board.tsx`
+
+## 第 7 阶段核心组件
+
+- `web/features/workbench/workbench-page.tsx`
+- `web/features/notification/notification-center.tsx`
+- `web/features/workbench/queries.ts`
+- `web/features/notification/queries.ts`
 
 ## 第 6 阶段数据库字段与迁移
 
@@ -196,6 +241,36 @@
   - `JoinPolicy`: `INVITE_ONLY | REQUEST_APPROVAL | OPEN`
   - `ProjectRole`: `OWNER | ADMIN | MEMBER | GUEST`
   - `ProjectMemberStatus`: `ACTIVE | INVITED | PENDING`
+
+## 第 7 阶段数据库字段与迁移
+
+- 新增 migration：`server/prisma/migrations/20260425010000_add_project_views_workbench_notifications`
+- 新增 migration：`server/prisma/migrations/20260425020000_remove_project_views`
+- 新增枚举
+  - `NotificationType`: `TASK_ASSIGNED | TASK_REASSIGNED | COMMENT_MENTION | PROJECT_JOIN_REQUEST | PROJECT_JOIN_APPROVED | PROJECT_JOIN_REJECTED | PROJECT_INVITED | TASK_OVERDUE`
+- 新增表 `notifications`
+  - `user_id`
+  - `type`
+  - `title`
+  - `content`
+  - `related_project_id`
+  - `related_task_id`
+  - `actor_id`
+  - `is_read`
+  - `metadata_json`
+  - `created_at`
+
+## 第 7 阶段手动测试清单
+
+1. 登录后访问 `/my`，确认能看到跨项目的“指派给我 / 逾期 / 今日到期 / 高优任务 / 我创建的 / 我关注的”分区。
+2. 在 `/my` 点击任一任务，确认会复用现有任务详情抽屉打开，并能继续编辑、评论和查看活动日志。
+3. 在 `/my` 的“待我审批”区域确认能看到项目加入申请，并能跳转到对应项目成员页进行审批。
+4. 顶部栏确认出现通知铃铛与未读数，点击后右侧通知中心能展示全部 / 未读通知。
+5. 新建任务并分配负责人，确认被分配用户登录后能在通知中心收到任务分配通知。
+6. 在任务评论区输入 `@` 并选择当前项目成员发送评论，确认被 @ 用户能收到评论通知。
+7. 使用第二个账号发起项目加入申请，再由 Owner/Admin 审批，确认申请提交、审批通过 / 拒绝、邀请加入都会生成通知。
+8. 为某个指派给自己的任务设置过去时间的截止时间，刷新通知中心后确认能收到逾期提醒。
+9. 执行 `./build.sh`，确认 migration、后端服务、前端服务都能正常启动。
 
 ## 第 6 阶段手动测试清单
 
@@ -220,9 +295,9 @@
 
 ## 下一阶段建议
 
-- 评论：补评论回复、@成员和评论通知，把协作从单层评论推进到多人讨论
-- 活动日志：把“查看更多”落成完整动态页，支持成员、任务、动作类型筛选
-- 统计：新增负责人负载趋势、模块进展、任务吞吐和逾期风险等轻量分析视图
+- 评论：补评论回复、富文本、任务关注和评论线程折叠
+- 活动日志：把项目和个人动态进一步扩展为完整 feed 页面，支持分页与类型筛选
+- 统计：补负责人负载趋势、任务吞吐、逾期风险和跨项目执行效率视图
 
 ## 联调建议
 

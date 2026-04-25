@@ -10,6 +10,7 @@ import { Prisma, ProjectStatus } from "@prisma/client";
 import { normalizeOptionalString } from "../../common/utils/normalize-string";
 import { parseBigIntId } from "../../common/utils/parse-bigint-id";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { UsersService, type UserProfile } from "../users/users.service";
 import { AddProjectMemberDto } from "./dto/add-project-member.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
@@ -87,6 +88,7 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listProjects(currentUserId: string) {
@@ -393,6 +395,7 @@ export class ProjectsService {
     const projectId = parseBigIntId(projectIdParam, "projectId");
     const userId = parseBigIntId(currentUserId, "userId");
     const access = await this.getProjectAccess(projectId, userId);
+    const projectIdentity = await this.getProjectIdentity(projectId);
 
     if (access.isActiveMember) {
       throw new ConflictException("你已经是该项目成员");
@@ -475,6 +478,19 @@ export class ProjectsService {
     `);
 
     const member = await this.fetchProjectMemberByUserId(projectId, userId);
+    const applicant = await this.usersService.findProfileById(userId);
+    const managerIds = await this.getProjectManagerUserIds(projectId, userId);
+
+    if (applicant && managerIds.length > 0) {
+      await this.notificationsService.notifyProjectJoinRequest({
+        recipientUserIds: managerIds,
+        actorId: userId,
+        actorName: applicant.name,
+        projectId,
+        projectName: projectIdentity.name,
+      });
+    }
+
     return {
       result: "pending",
       membership: this.serializeProjectMember(member, this.emptyWorkload()),
@@ -485,6 +501,7 @@ export class ProjectsService {
     const projectId = parseBigIntId(projectIdParam, "projectId");
     const operatorId = parseBigIntId(currentUserId, "userId");
     await this.assertProjectAdmin(projectId, currentUserId);
+    const projectIdentity = await this.getProjectIdentity(projectId);
 
     const targetUser = await this.usersService.findByEmail(dto.email);
     if (!targetUser) {
@@ -525,6 +542,13 @@ export class ProjectsService {
     `);
 
     const member = await this.fetchProjectMemberByUserId(projectId, targetUser.id);
+    await this.notificationsService.notifyProjectInvitation({
+      recipientUserId: targetUser.id,
+      actorId: operatorId,
+      projectId,
+      projectName: projectIdentity.name,
+    });
+
     return this.serializeProjectMember(member, this.emptyWorkload());
   }
 
@@ -533,6 +557,7 @@ export class ProjectsService {
     const memberId = parseBigIntId(memberIdParam, "memberId");
     const approverId = parseBigIntId(currentUserId, "userId");
     await this.assertProjectAdmin(projectId, currentUserId);
+    const projectIdentity = await this.getProjectIdentity(projectId);
 
     const member = await this.fetchProjectMemberById(projectId, memberId);
     if (member.role === "OWNER") {
@@ -552,6 +577,14 @@ export class ProjectsService {
       WHERE id = ${memberId}
     `);
 
+    await this.notificationsService.notifyProjectJoinDecision({
+      recipientUserId: BigInt(member.userId),
+      actorId: approverId,
+      projectId,
+      projectName: projectIdentity.name,
+      approved: true,
+    });
+
     return this.serializeProjectMember(
       await this.fetchProjectMemberById(projectId, memberId),
       this.emptyWorkload(),
@@ -561,7 +594,9 @@ export class ProjectsService {
   async rejectProjectMember(projectIdParam: string, memberIdParam: string, currentUserId: string) {
     const projectId = parseBigIntId(projectIdParam, "projectId");
     const memberId = parseBigIntId(memberIdParam, "memberId");
+    const operatorId = parseBigIntId(currentUserId, "userId");
     await this.assertProjectAdmin(projectId, currentUserId);
+    const projectIdentity = await this.getProjectIdentity(projectId);
 
     const member = await this.fetchProjectMemberById(projectId, memberId);
     if (member.role === "OWNER") {
@@ -576,6 +611,16 @@ export class ProjectsService {
       DELETE FROM project_members
       WHERE id = ${memberId}
     `);
+
+    if (member.status === "PENDING") {
+      await this.notificationsService.notifyProjectJoinDecision({
+        recipientUserId: BigInt(member.userId),
+        actorId: operatorId,
+        projectId,
+        projectName: projectIdentity.name,
+        approved: false,
+      });
+    }
 
     return {
       message: "已拒绝加入申请",
@@ -1002,6 +1047,7 @@ export class ProjectsService {
           status: member.status,
           joinedAt: member.joinedAt,
           displayColorToken: member.displayColorToken,
+          user: member.user,
         })),
         memberCount: activeMembers.length,
         pendingMemberCount: members.filter((member) => member.status === "PENDING").length,
@@ -1192,5 +1238,37 @@ export class ProjectsService {
 
   private canWriteTasks(role: ProjectRoleValue | null) {
     return role === "OWNER" || role === "ADMIN" || role === "MEMBER";
+  }
+
+  private async getProjectIdentity(projectId: bigint) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException("项目不存在");
+    }
+
+    return project;
+  }
+
+  private async getProjectManagerUserIds(projectId: bigint, excludeUserId?: bigint) {
+    const members = await this.prisma.projectMember.findMany({
+      where: {
+        projectId,
+        status: "ACTIVE",
+        role: { in: ["OWNER", "ADMIN"] },
+        ...(excludeUserId ? { userId: { not: excludeUserId } } : {}),
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    return members.map((member) => member.userId);
   }
 }

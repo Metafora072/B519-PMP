@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, KanbanSquare, Layers3, Plus, Search } from "lucide-react";
 
@@ -21,6 +22,8 @@ type TaskBoardToolbarProps = {
   onReset: () => void;
   onCreateTask: (status?: TaskStatus) => void;
   onCreateModule: () => void;
+  viewSwitcher?: ReactNode;
+  viewActions?: ReactNode;
 };
 
 export function TaskBoardToolbar({
@@ -33,6 +36,8 @@ export function TaskBoardToolbar({
   onReset,
   onCreateTask,
   onCreateModule,
+  viewSwitcher,
+  viewActions,
 }: TaskBoardToolbarProps) {
   return (
     <section className="rounded-[32px] border border-[#e8edf4] bg-[linear-gradient(135deg,#ffffff_0%,#f7faff_46%,#eef4ff_100%)] p-7 shadow-[0_18px_40px_rgba(31,35,41,0.05)]">
@@ -58,12 +63,14 @@ export function TaskBoardToolbar({
             </div>
 
             <ProjectViewTabs projectId={projectId} current="board" />
+            {viewSwitcher}
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Link href={`/projects/${projectId}/tasks`}>
               <Button variant="outline">切换到任务列表</Button>
             </Link>
+            {viewActions}
             <Button variant="outline" onClick={onCreateModule}>
               <Layers3 className="mr-2 h-4 w-4" />
               新建模块

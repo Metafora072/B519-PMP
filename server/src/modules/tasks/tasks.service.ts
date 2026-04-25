@@ -15,6 +15,7 @@ import { normalizeOptionalString } from "../../common/utils/normalize-string";
 import { parseBigIntId } from "../../common/utils/parse-bigint-id";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ModulesService } from "../modules/modules.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { ProjectsService } from "../projects/projects.service";
 import { userProfileSelect } from "../users/users.service";
 import { CreateTaskDto } from "./dto/create-task.dto";
@@ -77,6 +78,7 @@ export class TasksService {
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
     private readonly modulesService: ModulesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listProjectTasks(projectIdParam: string, currentUserId: string, query: ListProjectTasksDto) {
@@ -222,6 +224,19 @@ export class TasksService {
       });
 
       return task;
+    }).then(async (task) => {
+      if (task.assigneeId) {
+        await this.notificationsService.notifyTaskAssignment({
+          recipientUserId: task.assigneeId,
+          actorId: creatorId,
+          projectId: task.projectId,
+          taskId: task.id,
+          taskTitle: task.title,
+          previousAssigneeId: null,
+        });
+      }
+
+      return task;
     });
   }
 
@@ -294,6 +309,8 @@ export class TasksService {
       after: updatedTask,
       operatorId: parseBigIntId(currentUserId, "userId"),
     });
+
+    await this.notifyTaskAssigneeIfNeeded(task, updatedTask, parseBigIntId(currentUserId, "userId"));
 
     return updatedTask;
   }
@@ -375,6 +392,8 @@ export class TasksService {
       after: updatedTask,
       operatorId: parseBigIntId(currentUserId, "userId"),
     });
+
+    await this.notifyTaskAssigneeIfNeeded(task, updatedTask, parseBigIntId(currentUserId, "userId"));
 
     return updatedTask;
   }
@@ -597,5 +616,23 @@ export class TasksService {
       key: task.priority,
       label: task.priority,
     };
+  }
+
+  private async notifyTaskAssigneeIfNeeded(before: TaskRecord, after: TaskRecord, operatorId: bigint) {
+    const previousAssigneeId = before.assigneeId ?? null;
+    const nextAssigneeId = after.assigneeId ?? null;
+
+    if (previousAssigneeId === nextAssigneeId || !nextAssigneeId) {
+      return;
+    }
+
+    await this.notificationsService.notifyTaskAssignment({
+      recipientUserId: nextAssigneeId,
+      actorId: operatorId,
+      projectId: after.projectId,
+      taskId: after.id,
+      taskTitle: after.title,
+      previousAssigneeId,
+    });
   }
 }

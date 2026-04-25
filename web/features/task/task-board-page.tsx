@@ -26,7 +26,7 @@ type TaskBoardPageProps = {
   projectId: string;
 };
 
-const initialFilters: TaskBoardFilters & { keyword: string } = {
+const DEFAULT_TASK_BOARD_FILTERS: TaskBoardFilters & { keyword: string } = {
   keyword: "",
 };
 
@@ -39,7 +39,7 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
   const pushToast = useToastStore((state) => state.pushToast);
   const queryClient = useQueryClient();
 
-  const [filters, setFilters] = useState(initialFilters);
+  const [filters, setFilters] = useState(DEFAULT_TASK_BOARD_FILTERS);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createModuleOpen, setCreateModuleOpen] = useState(false);
   const [createDefaultStatus, setCreateDefaultStatus] = useState<TaskStatus>("TODO");
@@ -84,7 +84,7 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
   }
 
   function resetFilters() {
-    setFilters(initialFilters);
+    setFilters(DEFAULT_TASK_BOARD_FILTERS);
   }
 
   function handleOpenTask(task: TaskRecord) {

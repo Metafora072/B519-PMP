@@ -18,6 +18,13 @@ type ProjectCardProps = {
 };
 
 export function ProjectCard({ project, mode }: ProjectCardProps) {
+  const orderedMembers = [
+    ...project.members.filter((member) => member.role === "OWNER"),
+    ...project.members.filter((member) => member.role === "ADMIN"),
+    ...project.members.filter((member) => member.role === "MEMBER"),
+    ...project.members.filter((member) => member.role === "GUEST"),
+  ];
+
   const cardContent = (
     <div className="group block rounded-[28px] border border-[#e7ebf3] bg-white p-6 shadow-[0_14px_32px_rgba(31,35,41,0.04)] transition hover:-translate-y-0.5 hover:border-[#c5d7ff] hover:shadow-[0_18px_36px_rgba(51,112,255,0.10)]">
       <div className="flex items-start justify-between gap-4">
@@ -45,14 +52,25 @@ export function ProjectCard({ project, mode }: ProjectCardProps) {
         <ProjectJoinPolicyBadge joinPolicy={project.joinPolicy} />
       </div>
 
-      <div className="mt-5 flex items-center gap-3">
-        <MemberChip
-          memberKey={project.owner.id}
-          name={project.owner.name}
-          avatarUrl={project.owner.avatarUrl}
-          meta="Owner"
-          compact
-        />
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {orderedMembers.map((member) => (
+          <MemberChip
+            key={member.id}
+            memberKey={member.user.id}
+            name={member.user.name}
+            avatarUrl={member.user.avatarUrl}
+            meta={
+              member.role === "OWNER"
+                ? "Owner"
+                : member.role === "ADMIN"
+                  ? "Admin"
+                  : member.role === "GUEST"
+                    ? "Guest"
+                    : "Member"
+            }
+            compact
+          />
+        ))}
         {project.viewerMembership?.status === "PENDING" ? (
           <span className="rounded-full bg-[#fff7e8] px-3 py-1.5 text-xs font-medium text-[#9a6700]">
             请求已发送

@@ -47,10 +47,15 @@ export function useTaskFilters() {
     });
   }
 
+  function replaceFilters(nextFilters: TaskListFilters) {
+    setFilters(nextFilters);
+  }
+
   return {
     filters,
     queryFilters,
     updateFilter,
     resetFilters,
+    replaceFilters,
   };
 }

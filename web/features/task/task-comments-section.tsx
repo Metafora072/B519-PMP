@@ -15,11 +15,14 @@ import {
 import { getCurrentUser } from "@/services/auth";
 import { queryKeys } from "@/services/query-keys";
 
+import type { ProjectMember } from "@/services/types";
+
 type TaskCommentsSectionProps = {
   taskId: string;
+  members: ProjectMember[];
 };
 
-export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
+export function TaskCommentsSection({ taskId, members }: TaskCommentsSectionProps) {
   const commentsQuery = useTaskCommentsQuery(taskId);
   const currentUserQuery = useQuery({
     queryKey: queryKeys.auth.me,
@@ -29,6 +32,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   const updateCommentMutation = useUpdateTaskCommentMutation(taskId);
   const deleteCommentMutation = useDeleteTaskCommentMutation(taskId);
   const [draft, setDraft] = useState("");
+  const [mentionUserIds, setMentionUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   async function handleCreateComment() {
@@ -37,25 +41,42 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
     try {
       await createCommentMutation.mutateAsync({
         content: draft.trim(),
+        mentionUserIds,
       });
       setDraft("");
+      setMentionUserIds([]);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "评论发送失败");
     }
   }
 
-  async function handleUpdateComment(commentId: string, content: string) {
+  async function handleUpdateComment(commentId: string, content: string, nextMentionUserIds?: string[]) {
     setErrorMessage("");
 
     try {
       await updateCommentMutation.mutateAsync({
         commentId,
-        input: { content },
+        input: {
+          content,
+          mentionUserIds: nextMentionUserIds,
+        },
       });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "评论更新失败");
       throw error;
     }
+  }
+
+  function handleMentionSelect(memberId: string) {
+    const member = members.find((item) => item.user.id === memberId);
+    if (!member) {
+      return;
+    }
+
+    const mentionMatch = draft.match(/(?:^|\s)@([^\s@]*)$/);
+    const currentToken = mentionMatch?.[1] ?? "";
+    setDraft((prev) => prev.replace(new RegExp(`@${currentToken}$`), `@${member.user.name} `));
+    setMentionUserIds((prev) => Array.from(new Set([...prev, memberId])));
   }
 
   async function handleDeleteComment(commentId: string) {
@@ -79,6 +100,8 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
         value={draft}
         onChange={setDraft}
         onSubmit={handleCreateComment}
+        members={members}
+        onMentionSelect={handleMentionSelect}
         isPending={createCommentMutation.isPending}
       />
 
@@ -99,6 +122,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
               key={comment.id}
               comment={comment}
               canManage={currentUserQuery.data?.id === comment.userId}
+              members={members}
               isUpdating={updateCommentMutation.isPending}
               isDeleting={deleteCommentMutation.isPending}
               onUpdate={handleUpdateComment}
