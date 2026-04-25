@@ -19,15 +19,27 @@ enum ProjectStatus {
 
 enum ProjectVisibility {
   PRIVATE
-  INTERNAL
-  PUBLIC
+  MEMBERS_VISIBLE
+  ORG_VISIBLE
+}
+
+enum JoinPolicy {
+  INVITE_ONLY
+  REQUEST_APPROVAL
+  OPEN
 }
 
 enum ProjectRole {
-  PROJECT_ADMIN
-  MODULE_OWNER
+  OWNER
+  ADMIN
   MEMBER
   GUEST
+}
+
+enum ProjectMemberStatus {
+  ACTIVE
+  INVITED
+  PENDING
 }
 
 enum TaskType {
@@ -53,57 +65,70 @@ enum TaskPriority {
 }
 
 model User {
-  id             BigInt             @id @default(autoincrement())
-  email          String             @unique @db.VarChar(255)
-  passwordHash   String             @map("password_hash") @db.VarChar(255)
-  name           String             @db.VarChar(100)
-  avatarUrl      String?            @map("avatar_url") @db.VarChar(500)
-  status         UserStatus         @default(ACTIVE)
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  ownedProjects  Project[]          @relation("ProjectOwner")
-  projectMembers ProjectMember[]
-  ownedModules   Module[]
-  createdTasks   Task[]             @relation("TaskCreator")
-  assignedTasks  Task[]             @relation("TaskAssignee")
-  taskComments   TaskComment[]
-  activityLogs   TaskActivityLog[]
+  id                      BigInt          @id @default(autoincrement())
+  email                   String          @unique @db.VarChar(255)
+  passwordHash            String          @map("password_hash") @db.VarChar(255)
+  name                    String          @db.VarChar(100)
+  avatarUrl               String?         @map("avatar_url") @db.VarChar(500)
+  status                  UserStatus      @default(ACTIVE)
+  createdAt               DateTime        @default(now()) @map("created_at")
+  updatedAt               DateTime        @updatedAt @map("updated_at")
+  ownedProjects           Project[]       @relation("ProjectOwner")
+  projectMembers          ProjectMember[]
+  sentProjectInvitations  ProjectMember[] @relation("ProjectMemberInviter")
+  approvedProjectMembers  ProjectMember[] @relation("ProjectMemberApprover")
+  ownedModules            Module[]
+  createdTasks            Task[]          @relation("TaskCreator")
+  assignedTasks           Task[]          @relation("TaskAssignee")
+  taskComments            TaskComment[]
+  activityLogs            TaskActivityLog[]
 
   @@map("users")
 }
 
 model Project {
-  id           BigInt             @id @default(autoincrement())
-  name         String             @db.VarChar(120)
-  projectKey   String             @unique @map("project_key") @db.VarChar(30)
-  description  String?            @db.Text
-  icon         String?            @db.VarChar(255)
-  status       ProjectStatus      @default(ACTIVE)
-  visibility   ProjectVisibility  @default(PRIVATE)
-  ownerId      BigInt             @map("owner_id")
-  taskSeq      Int                @default(0) @map("task_seq")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
-  owner        User               @relation("ProjectOwner", fields: [ownerId], references: [id])
-  members      ProjectMember[]
-  modules      Module[]
-  tasks        Task[]
-  labels       Label[]
-  activityLogs TaskActivityLog[]
+  id              BigInt            @id @default(autoincrement())
+  name            String            @db.VarChar(120)
+  projectKey      String            @unique @map("project_key") @db.VarChar(30)
+  description     String?           @db.Text
+  icon            String?           @db.VarChar(255)
+  status          ProjectStatus     @default(ACTIVE)
+  visibility      ProjectVisibility @default(PRIVATE)
+  joinPolicy      JoinPolicy        @default(INVITE_ONLY) @map("join_policy")
+  ownerId         BigInt            @map("owner_id")
+  memberColorSeed String?           @map("member_color_seed") @db.VarChar(60)
+  taskSeq         Int               @default(0) @map("task_seq")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  owner           User              @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members         ProjectMember[]
+  modules         Module[]
+  tasks           Task[]
+  labels          Label[]
+  activityLogs    TaskActivityLog[]
 
   @@map("projects")
 }
 
 model ProjectMember {
-  id        BigInt      @id @default(autoincrement())
-  projectId BigInt      @map("project_id")
-  userId    BigInt      @map("user_id")
-  role      ProjectRole
-  createdAt DateTime    @default(now()) @map("created_at")
-  project   Project     @relation(fields: [projectId], references: [id])
-  user      User        @relation(fields: [userId], references: [id])
+  id                BigInt              @id @default(autoincrement())
+  projectId         BigInt              @map("project_id")
+  userId            BigInt              @map("user_id")
+  role              ProjectRole
+  status            ProjectMemberStatus @default(ACTIVE)
+  joinedAt          DateTime?           @map("joined_at")
+  invitedBy         BigInt?             @map("invited_by")
+  approvedBy        BigInt?             @map("approved_by")
+  displayColorToken String?             @map("display_color_token") @db.VarChar(30)
+  createdAt         DateTime            @default(now()) @map("created_at")
+  project           Project             @relation(fields: [projectId], references: [id])
+  user              User                @relation(fields: [userId], references: [id])
+  inviter           User?               @relation("ProjectMemberInviter", fields: [invitedBy], references: [id])
+  approver          User?               @relation("ProjectMemberApprover", fields: [approvedBy], references: [id])
 
   @@unique([projectId, userId])
+  @@index([projectId, status])
+  @@index([userId, status])
   @@map("project_members")
 }
 

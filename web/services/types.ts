@@ -1,7 +1,10 @@
 export type UserStatus = "ACTIVE" | "INACTIVE";
 export type ProjectStatus = "ACTIVE" | "ARCHIVED";
-export type ProjectVisibility = "PRIVATE" | "INTERNAL" | "PUBLIC";
-export type ProjectRole = "PROJECT_ADMIN" | "MODULE_OWNER" | "MEMBER" | "GUEST";
+export type ProjectVisibility = "PRIVATE" | "MEMBERS_VISIBLE" | "ORG_VISIBLE";
+export type JoinPolicy = "INVITE_ONLY" | "REQUEST_APPROVAL" | "OPEN";
+export type ProjectRole = "OWNER" | "ADMIN" | "MEMBER" | "GUEST";
+export type ProjectMemberStatus = "ACTIVE" | "INVITED" | "PENDING";
+export type ProjectJoinAction = "JOIN" | "REQUEST" | "INVITED" | "PENDING" | null;
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CLOSED";
 export type TaskPriority = "P0" | "P1" | "P2" | "P3";
 export type TaskType = "REQUIREMENT" | "BUG" | "IMPROVEMENT" | "TECH_DEBT" | "RESEARCH";
@@ -16,6 +19,27 @@ export type UserProfile = {
   updatedAt: string;
 };
 
+export type ProjectMemberStats = {
+  total: number;
+  todo: number;
+  inProgress: number;
+  done: number;
+  overdue: number;
+  p0: number;
+  p1: number;
+  p2: number;
+  p3: number;
+};
+
+export type ProjectViewerMembership = {
+  id: string;
+  userId: string;
+  role: ProjectRole;
+  status: ProjectMemberStatus;
+  joinedAt: string | null;
+  displayColorToken: string | null;
+};
+
 export type ProjectSummary = {
   id: string;
   name: string;
@@ -24,6 +48,8 @@ export type ProjectSummary = {
   icon: string | null;
   status: ProjectStatus;
   visibility: ProjectVisibility;
+  joinPolicy: JoinPolicy;
+  memberColorSeed: string | null;
   taskSeq: number;
   createdAt: string;
   updatedAt: string;
@@ -32,7 +58,15 @@ export type ProjectSummary = {
     id: string;
     role: ProjectRole;
     userId: string;
+    status: ProjectMemberStatus;
+    joinedAt: string | null;
+    displayColorToken: string | null;
   }>;
+  memberCount: number;
+  pendingMemberCount: number;
+  invitedMemberCount: number;
+  viewerMembership: ProjectViewerMembership | null;
+  joinAction: ProjectJoinAction;
   _count: {
     modules: number;
     tasks: number;
@@ -41,13 +75,27 @@ export type ProjectSummary = {
 
 export type ProjectMember = {
   id: string;
+  projectId: string;
+  userId: string;
   role: ProjectRole;
+  status: ProjectMemberStatus;
+  joinedAt: string | null;
+  invitedBy: string | null;
+  approvedBy: string | null;
+  displayColorToken: string | null;
   createdAt: string;
   user: UserProfile;
+  inviter: UserProfile | null;
+  approver: UserProfile | null;
+  stats: ProjectMemberStats;
 };
 
 export type ProjectDetail = Omit<ProjectSummary, "members"> & {
   members: ProjectMember[];
+};
+
+export type ProjectMemberWorkload = ProjectMember & {
+  stats: ProjectMemberStats;
 };
 
 export type ProjectModule = {
@@ -115,7 +163,22 @@ export type PaginatedTasks = {
     total: number;
     totalPages: number;
   };
+  grouping?: {
+    groupBy: TaskGroupBy;
+    viewMode: TaskViewMode;
+    includeUnassigned: boolean;
+    verticalGroupBy?: "status" | "assignee";
+    horizontalGroupBy?: "status" | "assignee";
+  };
+  groups?: Array<{
+    key: string;
+    label: string;
+    count: number;
+  }>;
 };
+
+export type TaskGroupBy = "assignee" | "module" | "status" | "priority";
+export type TaskViewMode = "list" | "board";
 
 export type TaskListFilters = {
   status?: TaskStatus;
@@ -123,6 +186,11 @@ export type TaskListFilters = {
   moduleId?: string;
   assigneeId?: string;
   keyword?: string;
+  groupBy?: TaskGroupBy;
+  viewMode?: TaskViewMode;
+  includeUnassigned?: boolean;
+  verticalGroupBy?: "status" | "assignee";
+  horizontalGroupBy?: "status" | "assignee";
   page?: number;
   pageSize?: number;
 };
@@ -138,6 +206,8 @@ export type CreateProjectInput = {
   name: string;
   projectKey: string;
   description?: string;
+  visibility?: ProjectVisibility;
+  joinPolicy?: JoinPolicy;
 };
 
 export type CreateModuleInput = {
@@ -169,6 +239,16 @@ export type ProjectTaskSummary = {
   inProgress: number;
   completed: number;
   overdue: number;
+};
+
+export type InviteProjectMemberInput = {
+  email: string;
+  role?: Exclude<ProjectRole, "OWNER">;
+  displayColorToken?: string;
+};
+
+export type UpdateProjectMemberRoleInput = {
+  role: Exclude<ProjectRole, "OWNER">;
 };
 
 export type TaskCommentRecord = {

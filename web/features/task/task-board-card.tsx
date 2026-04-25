@@ -5,8 +5,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Badge } from "@/components/ui/badge";
+import { MemberAvatar } from "@/features/member/member-avatar";
 import { TaskPriorityBadge } from "@/features/task/constants";
-import { formatDate, formatRelativeUpdate, getInitials } from "@/lib/format";
+import { formatDate, formatRelativeUpdate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { TaskRecord } from "@/services/types";
@@ -60,9 +61,12 @@ function TaskBoardCardBase({ task, onOpenTask, isDragging, overlay }: TaskBoardC
               ?
             </span>
           ) : (
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#edf3ff] text-[11px] font-semibold text-[#3370ff]">
-              {getInitials(task.assignee.name)}
-            </span>
+            <MemberAvatar
+              memberKey={task.assignee.id}
+              name={task.assignee.name}
+              avatarUrl={task.assignee.avatarUrl}
+              size="sm"
+            />
           )}
         </div>
 

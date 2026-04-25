@@ -1,17 +1,43 @@
 "use client";
 
-import { FolderKanban, Plus, RefreshCcw } from "lucide-react";
+import { FolderKanban, Plus, RefreshCcw, SearchCheck } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProjectCard } from "@/features/project/project-card";
 import { ProjectCreateDialog } from "@/features/project/project-create-dialog";
-import { useProjectsQuery } from "@/features/project/queries";
+import { useDiscoverableProjectsQuery, useProjectsQuery } from "@/features/project/queries";
+
+function SectionCard({
+  title,
+  description,
+  count,
+  children,
+}: {
+  title: string;
+  description: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="border-[#e8edf4] shadow-[0_14px_32px_rgba(31,35,41,0.04)]">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div>
+          <p className="text-sm text-[#8b95a7]">{description}</p>
+          <CardTitle className="mt-1">{title}</CardTitle>
+        </div>
+        <div className="rounded-full bg-[#f5f7fb] px-4 py-2 text-sm text-[#4e5969]">共 {count} 个项目</div>
+      </CardHeader>
+      <CardContent className="space-y-4">{children}</CardContent>
+    </Card>
+  );
+}
 
 export function ProjectListPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const projectsQuery = useProjectsQuery();
+  const joinedProjectsQuery = useProjectsQuery();
+  const discoverableProjectsQuery = useDiscoverableProjectsQuery();
 
   return (
     <>
@@ -24,15 +50,23 @@ export function ProjectListPage() {
                 项目空间
               </div>
               <div>
-                <h1 className="text-[32px] font-semibold tracking-tight text-[#1f2329]">项目页已经接入真实数据</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-[#646a73]">
-                  当前列表直接读取后端项目接口，卡片信息覆盖项目描述、成员数、任务数与更新时间，可继续扩展归档、排序与更多项目操作。
+                <h1 className="text-[32px] font-semibold tracking-tight text-[#1f2329]">
+                  项目入口已经切到“我参与 + 可发现”
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-[#646a73]">
+                  这里不再只显示“我已加入的项目”。私密项目保留访问边界，组织内可见项目则会出现在可发现区域，用户可直接加入或发起申请。
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => projectsQuery.refetch()}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void joinedProjectsQuery.refetch();
+                  void discoverableProjectsQuery.refetch();
+                }}
+              >
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 刷新列表
               </Button>
@@ -44,34 +78,57 @@ export function ProjectListPage() {
           </div>
         </section>
 
-        <Card className="border-[#e8edf4] shadow-[0_14px_32px_rgba(31,35,41,0.04)]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <p className="text-sm text-[#8b95a7]">全部项目</p>
-              <CardTitle className="mt-1">按更新时间排列</CardTitle>
+        <SectionCard
+          title="我参与的项目"
+          description="按更新时间排列"
+          count={joinedProjectsQuery.data?.length ?? 0}
+        >
+          {joinedProjectsQuery.isLoading ? (
+            <div className="rounded-[24px] border border-dashed border-[#d7dce5] bg-[#fbfcff] p-8 text-sm text-[#8b95a7]">
+              正在加载项目列表...
             </div>
-            <div className="rounded-full bg-[#f5f7fb] px-4 py-2 text-sm text-[#4e5969]">
-              共 {projectsQuery.data?.length ?? 0} 个项目
+          ) : joinedProjectsQuery.isError ? (
+            <div className="rounded-[24px] border border-dashed border-[#ffd8d2] bg-[#fff7f5] p-8 text-sm text-[#d83931]">
+              {joinedProjectsQuery.error.message}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {projectsQuery.isLoading ? (
-              <div className="rounded-[24px] border border-dashed border-[#d7dce5] bg-[#fbfcff] p-8 text-sm text-[#8b95a7]">
-                正在加载项目列表...
+          ) : joinedProjectsQuery.data && joinedProjectsQuery.data.length > 0 ? (
+            joinedProjectsQuery.data.map((project) => (
+              <ProjectCard key={project.id} project={project} mode="joined" />
+            ))
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-[#d7dce5] bg-[#fbfcff] p-8 text-sm leading-7 text-[#8b95a7]">
+              你还没有参与任何项目，先创建一个项目，或者从下方可发现区域加入。
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="可加入 / 可发现的项目"
+          description="组织内可见或已经收到邀请"
+          count={discoverableProjectsQuery.data?.length ?? 0}
+        >
+          {discoverableProjectsQuery.isLoading ? (
+            <div className="rounded-[24px] border border-dashed border-[#d7dce5] bg-[#fbfcff] p-8 text-sm text-[#8b95a7]">
+              正在加载可发现项目...
+            </div>
+          ) : discoverableProjectsQuery.isError ? (
+            <div className="rounded-[24px] border border-dashed border-[#ffd8d2] bg-[#fff7f5] p-8 text-sm text-[#d83931]">
+              {discoverableProjectsQuery.error.message}
+            </div>
+          ) : discoverableProjectsQuery.data && discoverableProjectsQuery.data.length > 0 ? (
+            discoverableProjectsQuery.data.map((project) => (
+              <ProjectCard key={project.id} project={project} mode="discoverable" />
+            ))
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-[#d7dce5] bg-[#fbfcff] p-8 text-sm leading-7 text-[#8b95a7]">
+              <div className="flex items-center gap-2 text-[#4e5969]">
+                <SearchCheck className="h-4 w-4" />
+                当前没有新的可发现项目
               </div>
-            ) : projectsQuery.isError ? (
-              <div className="rounded-[24px] border border-dashed border-[#ffd8d2] bg-[#fff7f5] p-8 text-sm text-[#d83931]">
-                {projectsQuery.error.message}
-              </div>
-            ) : projectsQuery.data && projectsQuery.data.length > 0 ? (
-              projectsQuery.data.map((project) => <ProjectCard key={project.id} project={project} />)
-            ) : (
-              <div className="rounded-[24px] border border-dashed border-[#d7dce5] bg-[#fbfcff] p-8 text-sm leading-7 text-[#8b95a7]">
-                还没有项目数据，先创建一个项目，把第 3 阶段业务页面真正跑起来。
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              <p className="mt-2">如果项目 owner 开启组织内可见或发出邀请，这里会出现可加入入口。</p>
+            </div>
+          )}
+        </SectionCard>
       </div>
 
       <ProjectCreateDialog open={isCreateDialogOpen} onClose={() => setIsCreateDialogOpen(false)} />

@@ -64,6 +64,19 @@
 - 动态项展示操作人、动作、关联任务与时间，并保留“查看更多”入口占位
 - 复用任务活动日志的 action 文案格式化逻辑，保持任务抽屉与项目概览页一致
 
+## 第 6 阶段已完成
+
+- 第 6-1 步：后端完成项目可见性、加入策略、成员状态、角色体系重构
+- 第 6-1 步：新增 discoverable / join / invite / approve / reject / role / workload 接口，并重做项目成员权限边界
+- 第 6-1 步：任务查询接口新增 `groupBy`、`viewMode`、`includeUnassigned`、`verticalGroupBy`、`horizontalGroupBy`
+- 第 6-2 步：项目列表页拆分为“我参与的项目”和“可加入 / 可发现的项目”
+- 第 6-2 步：新增项目成员页，支持邀请成员、审批加入、修改角色、移除成员
+- 第 6-2 步：补齐成员视觉系统，统一 `MemberAvatar`、`MemberChip`、`MemberGroup`、`AssigneeBadge`
+- 第 6-3 步：任务列表页默认按负责人分组，支持切换按负责人 / 模块 / 状态 / 平铺表格
+- 第 6-3 步：看板页升级为“状态列 + 负责人泳道”基础结构，未分配泳道固定在首行
+- 第 6-3 步：任务详情抽屉强化负责人位置，支持“快速分配给我”
+- 第 6-3 步：项目详情页新增负责人负载卡片，突出谁负责什么
+
 ## 第 3 阶段新增路由
 
 - `/projects`
@@ -74,6 +87,10 @@
 
 - `/projects/:id/board`
 
+## 第 6 阶段新增路由
+
+- `/projects/:id/members`
+
 ## 第 5 阶段第 1 步新增接口
 
 - `GET /api/tasks/:id/comments`
@@ -82,6 +99,21 @@
 - `DELETE /api/comments/:id`
 - `GET /api/tasks/:id/activities`
 - `GET /api/projects/:id/activities`
+
+## 第 6 阶段新增接口
+
+- `GET /api/projects/discoverable`
+- `POST /api/projects/:id/join`
+- `POST /api/projects/:id/invitations`
+- `POST /api/projects/:id/members/:memberId/approve`
+- `POST /api/projects/:id/members/:memberId/reject`
+- `DELETE /api/projects/:id/members/:memberId`
+- `PATCH /api/projects/:id/members/:memberId/role`
+- `GET /api/projects/:id/member-workloads`
+- `GET /api/projects/:id/tasks?groupBy=assignee|module|status|priority`
+- `GET /api/projects/:id/tasks?viewMode=list|board`
+- `GET /api/projects/:id/tasks?includeUnassigned=true|false`
+- `GET /api/projects/:id/tasks?verticalGroupBy=status&horizontalGroupBy=assignee`
 
 ## 第 5 阶段第 2 步新增组件
 
@@ -128,6 +160,56 @@
 - `web/features/task/task-create-dialog.tsx`
 - `web/components/ui/toast-viewport.tsx`
 
+## 第 6 阶段核心组件
+
+- `web/features/project/project-discover-page.tsx`
+- `web/features/project/project-members-page.tsx`
+- `web/features/project/project-member-invite-dialog.tsx`
+- `web/features/project/project-join-button.tsx`
+- `web/features/project/project-visibility-badge.tsx`
+- `web/features/project/project-join-policy-badge.tsx`
+- `web/features/project/project-member-workload-card.tsx`
+- `web/features/member/member-avatar.tsx`
+- `web/features/member/member-chip.tsx`
+- `web/features/member/member-group.tsx`
+- `web/features/member/assignee-badge.tsx`
+- `web/features/member/member-color.ts`
+- `web/features/task/task-group-switcher.tsx`
+- `web/features/task/task-list-grouped-by-assignee.tsx`
+- `web/features/task/task-assignee-group-section.tsx`
+- `web/features/task/task-assignee-swimlane-board.tsx`
+
+## 第 6 阶段数据库字段与迁移
+
+- 新增 migration：`server/prisma/migrations/20260424110000_refactor_project_membership_system`
+- `projects`
+  - `join_policy`
+  - `member_color_seed`
+- `project_members`
+  - `status`
+  - `joined_at`
+  - `invited_by`
+  - `approved_by`
+  - `display_color_token`
+- 枚举调整
+  - `ProjectVisibility`: `PRIVATE | MEMBERS_VISIBLE | ORG_VISIBLE`
+  - `JoinPolicy`: `INVITE_ONLY | REQUEST_APPROVAL | OPEN`
+  - `ProjectRole`: `OWNER | ADMIN | MEMBER | GUEST`
+  - `ProjectMemberStatus`: `ACTIVE | INVITED | PENDING`
+
+## 第 6 阶段手动测试清单
+
+1. 用户 A 创建一个 `ORG_VISIBLE + REQUEST_APPROVAL` 项目，确认项目卡片出现在“我参与的项目”。
+2. 用户 B 登录后访问 `/projects`，确认能在“可加入 / 可发现的项目”看到该项目，并能点击“申请加入”。
+3. 用户 A 进入 `/projects/:id/members`，确认能看到 B 的待审批记录，并可执行“批准”或“拒绝”。
+4. 用户 A 邀请一个已注册用户，确认被邀请用户在 `/projects` 的“可加入 / 可发现的项目”区域看到“接受邀请”。
+5. 进入 `/projects/:id`，确认顶部能看到 owner、成员组、可见性标签、加入方式标签和负责人负载卡片。
+6. 进入 `/projects/:id/tasks`，确认默认按负责人分组，第一组固定为“未分配”，并可切换到按模块 / 按状态 / 平铺表格。
+7. 进入 `/projects/:id/board`，确认看板按状态列展示，并按负责人分成横向泳道。
+8. 打开任务详情抽屉，确认标题下方第一屏出现负责人、状态、优先级、模块，并能使用“快速分配给我”。
+9. 创建、更新任务后回到成员页和项目详情页，确认负责人负载统计会刷新。
+10. 执行 `./build.sh` 后检查 systemd 迁移和服务日志，确认新 migration 已应用。
+
 ## 第 4 阶段拖拽状态同步策略
 
 - 看板页基于 TanStack Query 的 board query 拉取当前项目任务，并在页面内维护一份可拖拽的本地任务顺序
@@ -138,9 +220,9 @@
 
 ## 下一阶段建议
 
-- 动态页：把“查看更多”落成完整项目活动页，支持分页与筛选
-- 评论增强：补评论回复、@ 成员和发送态优化
-- 统计：增加项目燃尽、负责人负载、模块进展等轻量分析卡片
+- 评论：补评论回复、@成员和评论通知，把协作从单层评论推进到多人讨论
+- 活动日志：把“查看更多”落成完整动态页，支持成员、任务、动作类型筛选
+- 统计：新增负责人负载趋势、模块进展、任务吞吐和逾期风险等轻量分析视图
 
 ## 联调建议
 
@@ -403,10 +485,9 @@ npm run service:uninstall
 
 ## 下一阶段建议
 
-- 前端接入项目列表、项目详情、模块列表、任务列表接口，完成真实数据渲染
-- 继续补齐评论、活动日志查询、项目概览统计接口
-- 增加更细粒度的角色权限，如项目管理员、模块负责人、普通成员的写入差异
-- 为任务状态流转补充更明确的业务规则校验与集成测试
+- 评论：补评论回复、@成员和评论通知，把协作从单层评论推进到多人讨论
+- 活动日志：把“查看更多”落成完整动态页，支持成员、任务、动作类型筛选
+- 统计：新增负责人负载趋势、模块进展、任务吞吐和逾期风险等轻量分析视图
 
 ## 后续联调建议
 

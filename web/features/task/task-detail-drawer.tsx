@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, FolderKanban, UserRound, X } from "lucide-react";
 
 import { TaskActivityTimeline } from "@/features/task/task-activity-timeline";
+import { AssigneeBadge } from "@/features/member/assignee-badge";
 import { Button } from "@/components/ui/button";
 import { TaskCommentsSection } from "@/features/task/task-comments-section";
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,8 @@ import {
   useUpdateTaskStatusMutation,
 } from "@/features/task/queries";
 import { fromDateTimeLocalValue, formatDateTime, toDateTimeLocalValue } from "@/lib/format";
+import { getCurrentUser } from "@/services/auth";
+import { queryKeys } from "@/services/query-keys";
 import { useTaskDrawerStore } from "@/store/task-drawer-store";
 
 import type {
@@ -40,6 +44,10 @@ type TaskDetailDrawerProps = {
 export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
   const { closeDrawer, isOpen, projectId, taskId } = useTaskDrawerStore();
   const taskQuery = useTaskDetailQuery(taskId);
+  const currentUserQuery = useQuery({
+    queryKey: queryKeys.auth.me,
+    queryFn: getCurrentUser,
+  });
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -52,6 +60,7 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
   const updateStatusMutation = useUpdateTaskStatusMutation(projectId ?? "", taskId ?? "");
   const updatePriorityMutation = useUpdateTaskPriorityMutation(projectId ?? "", taskId ?? "");
   const updateAssigneeMutation = useUpdateTaskAssigneeMutation(projectId ?? "", taskId ?? "");
+  const activeMembers = members.filter((member) => member.status === "ACTIVE");
 
   useEffect(() => {
     if (!taskQuery.data) {
@@ -150,13 +159,39 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
           ) : (
             <>
               <div className="rounded-[24px] border border-[#e8edf4] bg-[#fbfcff] p-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <TaskStatusBadge status={taskQuery.data.status} />
-                  <TaskPriorityBadge priority={taskQuery.data.priority} />
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[22px] font-semibold text-[#1f2329]">{taskQuery.data.title}</p>
+                    <p className="mt-1 text-sm text-[#8b95a7]">{taskQuery.data.taskNo}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AssigneeBadge
+                      id={taskQuery.data.assignee?.id ?? null}
+                      name={taskQuery.data.assignee?.name ?? null}
+                      avatarUrl={taskQuery.data.assignee?.avatarUrl}
+                      emphasizeUnassigned
+                    />
+                    <TaskStatusBadge status={taskQuery.data.status} />
+                    <TaskPriorityBadge priority={taskQuery.data.priority} />
+                    <span className="rounded-full border border-[#e7ebf3] bg-white px-3 py-1.5 text-sm text-[#4e5969]">
+                      模块 · {taskQuery.data.module?.name ?? "未分类"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm leading-7 text-[#646a73]">
+                      最近更新时间：{formatDateTime(taskQuery.data.updatedAt)}
+                    </p>
+                    {currentUserQuery.data && taskQuery.data.assignee?.id !== currentUserQuery.data.id ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleAssigneeChange(currentUserQuery.data?.id ?? "")}
+                      >
+                        快速分配给我
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-                <p className="mt-3 text-sm leading-7 text-[#646a73]">
-                  最近更新时间：{formatDateTime(taskQuery.data.updatedAt)}
-                </p>
               </div>
 
               <div className="space-y-4 rounded-[24px] border border-[#e8edf4] bg-white p-5">
@@ -244,7 +279,7 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
                     disabled={updateAssigneeMutation.isPending}
                   >
                     <option value="">暂不分配</option>
-                    {members.map((member) => (
+                    {activeMembers.map((member) => (
                       <option key={member.id} value={member.user.id}>
                         {member.user.name}
                       </option>
@@ -259,9 +294,14 @@ export function TaskDetailDrawer({ members, modules }: TaskDetailDrawerProps) {
                     <UserRound className="h-4 w-4" />
                     负责人
                   </div>
-                  <p className="mt-2 font-medium text-[#1f2329]">
-                    {taskQuery.data.assignee?.name ?? "暂未分配负责人"}
-                  </p>
+                  <div className="mt-2">
+                    <AssigneeBadge
+                      id={taskQuery.data.assignee?.id ?? null}
+                      name={taskQuery.data.assignee?.name ?? null}
+                      avatarUrl={taskQuery.data.assignee?.avatarUrl}
+                      emphasizeUnassigned
+                    />
+                  </div>
                 </div>
                 <div className="rounded-[22px] border border-[#e8edf4] bg-[#fbfcff] p-4">
                   <div className="flex items-center gap-2 text-sm text-[#8b95a7]">

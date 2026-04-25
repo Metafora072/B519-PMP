@@ -52,6 +52,7 @@ export function TaskCreateDialog({
   onClose,
 }: TaskCreateDialogProps) {
   const createTaskMutation = useCreateTaskMutation(projectId);
+  const activeMembers = members.filter((member) => member.status === "ACTIVE");
   const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState<TaskCreateFormState>(() => buildInitialState(modules, defaultStatus));
   const dialogState = useMemo(() => buildInitialState(modules, defaultStatus), [defaultStatus, modules]);
@@ -127,6 +128,21 @@ export function TaskCreateDialog({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
+                <label className="text-sm font-medium text-[#1f2329]">负责人</label>
+                <Select
+                  value={formData.assigneeId}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, assigneeId: event.target.value }))}
+                >
+                  <option value="">暂不分配</option>
+                  {activeMembers.map((member) => (
+                    <option key={member.id} value={member.user.id}>
+                      {member.user.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-[#1f2329]">模块</label>
                 <Select
                   value={formData.moduleId}
@@ -173,20 +189,6 @@ export function TaskCreateDialog({
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#1f2329]">负责人</label>
-                <Select
-                  value={formData.assigneeId}
-                  onChange={(event) => setFormData((prev) => ({ ...prev, assigneeId: event.target.value }))}
-                >
-                  <option value="">暂不分配</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.user.id}>
-                      {member.user.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
             </div>
 
             <div className="space-y-2">

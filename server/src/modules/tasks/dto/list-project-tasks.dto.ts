@@ -1,6 +1,20 @@
-import { TaskPriority, TaskStatus } from "@prisma/client";
 import { Transform, Type } from "class-transformer";
-import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, Min } from "class-validator";
+import { TaskPriority, TaskStatus } from "@prisma/client";
+import {
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+} from "class-validator";
+
+const TASK_GROUP_FIELDS = ["assignee", "module", "status", "priority"] as const;
+const TASK_VIEW_MODES = ["list", "board"] as const;
+const BOARD_GROUP_FIELDS = ["status", "assignee"] as const;
 
 export class ListProjectTasksDto {
   @IsOptional()
@@ -19,7 +33,7 @@ export class ListProjectTasksDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\d+$/)
+  @Matches(/^(?:\d+|none)$/)
   @Transform(({ value }) => value?.trim())
   assigneeId?: string;
 
@@ -27,6 +41,37 @@ export class ListProjectTasksDto {
   @IsString()
   @Transform(({ value }) => value?.trim())
   keyword?: string;
+
+  @IsOptional()
+  @IsIn(TASK_GROUP_FIELDS)
+  groupBy?: (typeof TASK_GROUP_FIELDS)[number];
+
+  @IsOptional()
+  @IsIn(TASK_VIEW_MODES)
+  viewMode?: (typeof TASK_VIEW_MODES)[number];
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    return value === "true" || value === "1";
+  })
+  @IsBoolean()
+  includeUnassigned?: boolean;
+
+  @IsOptional()
+  @IsIn(BOARD_GROUP_FIELDS)
+  verticalGroupBy?: (typeof BOARD_GROUP_FIELDS)[number];
+
+  @IsOptional()
+  @IsIn(BOARD_GROUP_FIELDS)
+  horizontalGroupBy?: (typeof BOARD_GROUP_FIELDS)[number];
 
   @IsOptional()
   @Type(() => Number)

@@ -81,6 +81,7 @@ export function TaskFiltersBar({
           onChange={(event) => onFilterChange("assigneeId", event.target.value || undefined)}
         >
           <option value="">全部负责人</option>
+          <option value="none">未分配</option>
           {members.map((member) => (
             <option key={member.id} value={member.user.id}>
               {member.user.name}

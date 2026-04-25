@@ -64,7 +64,7 @@ export function AppSidebar() {
       <div className="mt-auto rounded-[20px] border border-[#e5e6eb] bg-[#fbfcfe] p-4">
         <p className="text-sm font-medium text-[#1f2329]">当前阶段</p>
         <p className="mt-2 text-sm leading-6 text-[#646a73]">
-          已进入第 3 阶段，前端项目页、任务列表页与详情抽屉正在承接真实业务数据。
+          已进入第 6 阶段，项目发现、成员管理、负责人分组任务页与负责人泳道看板均已接入真实数据。
         </p>
       </div>
     </aside>

@@ -10,7 +10,7 @@ import {
   syncTaskAfterMutation,
   useProjectBoardQuery,
 } from "@/features/task/queries";
-import { TaskBoard } from "@/features/task/task-board";
+import { TaskAssigneeSwimlaneBoard } from "@/features/task/task-assignee-swimlane-board";
 import { TaskBoardToolbar } from "@/features/task/task-board-toolbar";
 import { TaskCreateDialog } from "@/features/task/task-create-dialog";
 import { TaskDetailDrawer } from "@/features/task/task-detail-drawer";
@@ -73,7 +73,7 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
     },
   });
 
-  const members = membersQuery.data ?? [];
+  const members = (membersQuery.data ?? []).filter((member) => member.status === "ACTIVE");
   const modules = modulesQuery.data ?? [];
 
   function updateFilter(key: keyof TaskBoardFilters, value: string | undefined) {
@@ -155,8 +155,9 @@ export function TaskBoardPage({ projectId }: TaskBoardPageProps) {
           {boardQuery.error.message}
         </div>
       ) : boardTasks.length ? (
-        <TaskBoard
+        <TaskAssigneeSwimlaneBoard
           tasks={boardTasks}
+          members={members}
           onOpenTask={handleOpenTask}
           onCreateTask={handleOpenCreateDialog}
           onMoveTask={handleMoveTask}

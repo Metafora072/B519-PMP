@@ -1,7 +1,8 @@
-import { ProjectStatus, ProjectVisibility } from "@prisma/client";
+import { ProjectStatus } from "@prisma/client";
 import { Transform } from "class-transformer";
 import {
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Matches,
@@ -10,6 +11,12 @@ import {
 } from "class-validator";
 
 import { normalizeProjectKey } from "../../../common/utils/normalize-string";
+import {
+  JOIN_POLICY_VALUES,
+  PROJECT_VISIBILITY_VALUES,
+  type JoinPolicyValue,
+  type ProjectVisibilityValue,
+} from "../project-membership.constants";
 
 export class CreateProjectDto {
   @IsString()
@@ -42,7 +49,10 @@ export class CreateProjectDto {
   status?: ProjectStatus;
 
   @IsOptional()
-  @IsEnum(ProjectVisibility)
-  visibility?: ProjectVisibility;
-}
+  @IsIn(PROJECT_VISIBILITY_VALUES)
+  visibility?: ProjectVisibilityValue;
 
+  @IsOptional()
+  @IsIn(JOIN_POLICY_VALUES)
+  joinPolicy?: JoinPolicyValue;
+}

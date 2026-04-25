@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateProjectMutation } from "@/features/project/queries";
+import type { JoinPolicy, ProjectVisibility } from "@/services/types";
 
 type ProjectCreateDialogProps = {
   open: boolean;
@@ -16,6 +18,8 @@ const initialState = {
   name: "",
   projectKey: "",
   description: "",
+  visibility: "PRIVATE" as ProjectVisibility,
+  joinPolicy: "INVITE_ONLY" as JoinPolicy,
 };
 
 export function ProjectCreateDialog({ open, onClose }: ProjectCreateDialogProps) {
@@ -37,6 +41,8 @@ export function ProjectCreateDialog({ open, onClose }: ProjectCreateDialogProps)
         name: formData.name.trim(),
         projectKey: normalizedKey,
         description: formData.description.trim(),
+        visibility: formData.visibility,
+        joinPolicy: formData.joinPolicy,
       });
 
       setFormData(initialState);
@@ -92,6 +98,36 @@ export function ProjectCreateDialog({ open, onClose }: ProjectCreateDialogProps)
               onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
               placeholder="补充项目目标、阶段范围和交付预期"
             />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#1f2329]">项目可见性</label>
+              <Select
+                value={formData.visibility}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, visibility: event.target.value as ProjectVisibility }))
+                }
+              >
+                <option value="PRIVATE">私密</option>
+                <option value="MEMBERS_VISIBLE">成员可见</option>
+                <option value="ORG_VISIBLE">组织内可见</option>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#1f2329]">加入方式</label>
+              <Select
+                value={formData.joinPolicy}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, joinPolicy: event.target.value as JoinPolicy }))
+                }
+              >
+                <option value="INVITE_ONLY">仅邀请</option>
+                <option value="REQUEST_APPROVAL">申请审批</option>
+                <option value="OPEN">可直接加入</option>
+              </Select>
+            </div>
           </div>
 
           {errorMessage ? <p className="text-sm text-[#d83931]">{errorMessage}</p> : null}

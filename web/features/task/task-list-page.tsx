@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, KanbanSquare, Layers3, ListFilter, Plus } from "lucide-react";
+import { ArrowLeft, KanbanSquare, Layers3, ListFilter, Plus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { MemberChip } from "@/features/member/member-chip";
 import { ModuleCreateDialog } from "@/features/module/module-create-dialog";
 import { ProjectViewTabs } from "@/features/project/project-view-tabs";
+import { TaskAssigneeGroupSection } from "@/features/task/task-assignee-group-section";
 import { TaskCreateDialog } from "@/features/task/task-create-dialog";
 import { TaskDetailDrawer } from "@/features/task/task-detail-drawer";
 import { TaskFiltersBar } from "@/features/task/task-filters-bar";
+import { TaskGroupSwitcher } from "@/features/task/task-group-switcher";
+import { TaskListGroupedByAssignee } from "@/features/task/task-list-grouped-by-assignee";
 import { TaskTable } from "@/features/task/task-table";
 import { useTaskFilters } from "@/hooks/use-task-filters";
 import { useTaskDrawerStore } from "@/store/task-drawer-store";
@@ -20,23 +24,96 @@ import {
 } from "@/features/project/queries";
 import { useProjectTasksQuery } from "@/features/task/queries";
 
+import type { PaginatedTasks, TaskRecord } from "@/services/types";
+
 type TaskListPageProps = {
   projectId: string;
 };
+
+type TaskGroupMode = "assignee" | "module" | "status" | "table";
+
+function groupTasks(items: TaskRecord[], mode: Exclude<TaskGroupMode, "table">) {
+  const groups = new Map<string, { title: string; tasks: TaskRecord[] }>();
+
+  for (const task of items) {
+    const descriptor =
+      mode === "assignee"
+        ? {
+            key: task.assignee?.id ?? "unassigned",
+            title: task.assignee?.name ?? "未分配",
+          }
+        : mode === "module"
+          ? {
+              key: task.module?.id ?? "none",
+              title: task.module?.name ?? "未分类",
+            }
+          : {
+              key: task.status,
+              title: task.status === "TODO" ? "Todo" : task.status === "IN_PROGRESS" ? "In Progress" : task.status,
+            };
+
+    const current = groups.get(descriptor.key) ?? { title: descriptor.title, tasks: [] };
+    current.tasks.push(task);
+    groups.set(descriptor.key, current);
+  }
+
+  return Array.from(groups.entries()).map(([key, value]) => ({
+    key,
+    ...value,
+  }));
+}
 
 export function TaskListPage({ projectId }: TaskListPageProps) {
   const { filters, queryFilters, resetFilters, updateFilter } = useTaskFilters();
   const openDrawer = useTaskDrawerStore((state) => state.openDrawer);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createModuleOpen, setCreateModuleOpen] = useState(false);
+  const [groupMode, setGroupMode] = useState<TaskGroupMode>("assignee");
 
   const projectQuery = useProjectQuery(projectId);
   const membersQuery = useProjectMembersQuery(projectId);
   const modulesQuery = useProjectModulesQuery(projectId);
-  const tasksQuery = useProjectTasksQuery(projectId, queryFilters);
+  const tasksQuery = useProjectTasksQuery(projectId, {
+    ...queryFilters,
+    groupBy: groupMode === "table" ? "assignee" : groupMode,
+    viewMode: "list",
+  });
 
-  const members = membersQuery.data ?? [];
+  const members = useMemo(
+    () => (membersQuery.data ?? []).filter((member) => member.status === "ACTIVE"),
+    [membersQuery.data],
+  );
   const modules = modulesQuery.data ?? [];
+
+  function renderGroupedContent(data: PaginatedTasks) {
+    if (groupMode === "assignee") {
+      return <TaskListGroupedByAssignee data={data} onOpenTask={(task) => openDrawer({ projectId, taskId: task.id })} />;
+    }
+
+    if (groupMode === "table") {
+      return (
+        <TaskTable
+          data={data}
+          onOpenTask={(task) => openDrawer({ projectId, taskId: task.id })}
+          onPageChange={(page) => updateFilter("page", page)}
+        />
+      );
+    }
+
+    const groups = groupTasks(data.items, groupMode);
+    return (
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <TaskAssigneeGroupSection
+            key={group.key}
+            title={group.title}
+            tasks={group.tasks}
+            onOpenTask={(task) => openDrawer({ projectId, taskId: task.id })}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -52,10 +129,28 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
                 {projectQuery.data?.name ?? "项目任务"}
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-[#646a73]">
-                顶部筛选、关键字搜索、分页与右侧详情抽屉都已接入真实任务接口，任务视图与看板视图共享同一套缓存。
+                任务页默认按负责人组织。进入项目后，第一眼看到的是“谁负责哪些任务”，而不是一整张无差别平铺表格。
               </p>
             </div>
-            <ProjectViewTabs projectId={projectId} current="tasks" />
+            <div className="flex flex-wrap items-center gap-3">
+              <ProjectViewTabs projectId={projectId} current="tasks" />
+              <TaskGroupSwitcher value={groupMode} onChange={setGroupMode} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm text-[#4e5969]">
+                <Users className="h-4 w-4 text-[#8b95a7]" />
+                当前活跃成员
+              </span>
+              {members.slice(0, 4).map((member) => (
+                <MemberChip
+                  key={member.id}
+                  memberKey={member.user.id}
+                  name={member.user.name}
+                  avatarUrl={member.user.avatarUrl}
+                  compact
+                />
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -70,6 +165,9 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
                 <KanbanSquare className="mr-2 h-4 w-4" />
                 切换到看板
               </Button>
+            </Link>
+            <Link href={`/projects/${projectId}/members`}>
+              <Button variant="outline">成员页</Button>
             </Link>
             <Button variant="outline" onClick={() => setCreateModuleOpen(true)}>
               <Layers3 className="mr-2 h-4 w-4" />
@@ -100,11 +198,7 @@ export function TaskListPage({ projectId }: TaskListPageProps) {
           {tasksQuery.error.message}
         </div>
       ) : tasksQuery.data ? (
-        <TaskTable
-          data={tasksQuery.data}
-          onOpenTask={(task) => openDrawer({ projectId, taskId: task.id })}
-          onPageChange={(page) => updateFilter("page", page)}
-        />
+        renderGroupedContent(tasksQuery.data)
       ) : null}
 
       <TaskDetailDrawer members={members} modules={modules} />

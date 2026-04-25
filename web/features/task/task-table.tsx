@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { AssigneeBadge } from "@/features/member/assignee-badge";
 import { TaskPriorityBadge, TaskStatusBadge } from "@/features/task/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -52,7 +53,13 @@ export function TaskTable({ data, onOpenTask, onPageChange }: TaskTableProps) {
                     <TaskPriorityBadge priority={task.priority} />
                   </td>
                   <td className="px-5 py-4 text-sm text-[#4e5969]">{task.module?.name ?? "未分类"}</td>
-                  <td className="px-5 py-4 text-sm text-[#4e5969]">{task.assignee?.name ?? "未分配"}</td>
+                  <td className="px-5 py-4">
+                    <AssigneeBadge
+                      id={task.assignee?.id ?? null}
+                      name={task.assignee?.name ?? null}
+                      avatarUrl={task.assignee?.avatarUrl}
+                    />
+                  </td>
                   <td className="px-5 py-4 text-sm text-[#4e5969]">{formatDate(task.dueAt)}</td>
                   <td className="px-5 py-4 text-sm text-[#8b95a7]">{formatDateTime(task.updatedAt)}</td>
                 </tr>

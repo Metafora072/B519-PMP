@@ -7,13 +7,14 @@ import { cn } from "@/lib/utils";
 
 type ProjectViewTabsProps = {
   projectId: string;
-  current: "overview" | "tasks" | "board";
+  current: "overview" | "tasks" | "board" | "members";
 };
 
 const tabs = [
   { key: "overview", label: "Overview", href: (projectId: string) => `/projects/${projectId}` },
   { key: "tasks", label: "Tasks", href: (projectId: string) => `/projects/${projectId}/tasks` },
   { key: "board", label: "Board", href: (projectId: string) => `/projects/${projectId}/board` },
+  { key: "members", label: "Members", href: (projectId: string) => `/projects/${projectId}/members` },
 ] as const;
 
 export function ProjectViewTabs({ projectId, current }: ProjectViewTabsProps) {

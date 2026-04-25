@@ -10,6 +10,9 @@ const DEFAULT_PAGE_SIZE = 10;
 
 export function useTaskFilters() {
   const [filters, setFilters] = useState<TaskListFilters>({
+    groupBy: "assignee",
+    viewMode: "list",
+    includeUnassigned: true,
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     keyword: "",
@@ -35,6 +38,9 @@ export function useTaskFilters() {
 
   function resetFilters() {
     setFilters({
+      groupBy: "assignee",
+      viewMode: "list",
+      includeUnassigned: true,
       page: 1,
       pageSize: DEFAULT_PAGE_SIZE,
       keyword: "",

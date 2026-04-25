@@ -3,7 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { Prisma, TaskPriority, TaskStatus, TaskType } from "@prisma/client";
+import {
+  Prisma,
+  ProjectRole,
+  TaskPriority,
+  TaskStatus,
+  TaskType,
+} from "@prisma/client";
 
 import { normalizeOptionalString } from "../../common/utils/normalize-string";
 import { parseBigIntId } from "../../common/utils/parse-bigint-id";
@@ -80,6 +86,11 @@ export class TasksService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
     const keyword = query.keyword?.trim();
+    const groupBy = query.groupBy ?? "assignee";
+    const viewMode = query.viewMode ?? "list";
+    const includeUnassigned = query.includeUnassigned ?? true;
+    const verticalGroupBy = query.verticalGroupBy ?? "status";
+    const horizontalGroupBy = query.horizontalGroupBy ?? (groupBy === "assignee" ? "assignee" : undefined);
 
     const where = {
       projectId,
@@ -87,11 +98,16 @@ export class TasksService {
       ...(query.status ? { status: query.status } : {}),
       ...(query.priority ? { priority: query.priority } : {}),
       ...(query.moduleId
-        ? query.moduleId === "none"
-          ? { moduleId: null as never }
-          : { moduleId: parseBigIntId(query.moduleId, "moduleId") }
+          ? query.moduleId === "none"
+            ? { moduleId: null as never }
+            : { moduleId: parseBigIntId(query.moduleId, "moduleId") }
         : {}),
-      ...(query.assigneeId ? { assigneeId: parseBigIntId(query.assigneeId, "assigneeId") } : {}),
+      ...(query.assigneeId
+        ? query.assigneeId === "none"
+          ? { assigneeId: null as never }
+          : { assigneeId: parseBigIntId(query.assigneeId, "assigneeId") }
+        : {}),
+      ...(query.assigneeId || includeUnassigned ? {} : { assigneeId: { not: null } }),
       ...(keyword
         ? {
             OR: [
@@ -108,7 +124,7 @@ export class TasksService {
       this.prisma.task.findMany({
         where,
         select: taskSelect,
-        orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+        orderBy: this.buildTaskOrderBy(groupBy),
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -122,13 +138,21 @@ export class TasksService {
         total,
         totalPages: Math.ceil(total / pageSize) || 1,
       },
+      grouping: {
+        groupBy,
+        viewMode,
+        includeUnassigned,
+        verticalGroupBy,
+        horizontalGroupBy,
+      },
+      groups: this.buildTaskGroups(items, groupBy),
     };
   }
 
   async createTask(projectIdParam: string, currentUserId: string, dto: CreateTaskDto) {
     const projectId = parseBigIntId(projectIdParam, "projectId");
     const creatorId = parseBigIntId(currentUserId, "userId");
-    await this.projectsService.assertProjectMember(projectId, currentUserId);
+    await this.projectsService.assertProjectContributor(projectId, currentUserId);
 
     const moduleId = dto.moduleId ? parseBigIntId(dto.moduleId, "moduleId") : null;
     if (dto.moduleId) {
@@ -215,7 +239,7 @@ export class TasksService {
 
   async updateTask(taskIdParam: string, currentUserId: string, dto: UpdateTaskDto) {
     const task = await this.getActiveTaskEntity(taskIdParam);
-    await this.projectsService.assertProjectMember(task.projectId, currentUserId);
+    await this.projectsService.assertProjectContributor(task.projectId, currentUserId);
 
     if (dto.moduleId) {
       await this.ensureModuleBelongsToProject(dto.moduleId, task.projectId, currentUserId);
@@ -323,7 +347,7 @@ export class TasksService {
 
   async updateTaskAssignee(taskIdParam: string, currentUserId: string, dto: UpdateTaskAssigneeDto) {
     const task = await this.getActiveTaskEntity(taskIdParam);
-    await this.projectsService.assertProjectMember(task.projectId, currentUserId);
+    await this.projectsService.assertProjectContributor(task.projectId, currentUserId);
 
     if (dto.assigneeId === undefined) {
       throw new BadRequestException("assigneeId 不能为空，取消负责人请传 null");
@@ -495,5 +519,83 @@ export class TasksService {
         data: logs,
       });
     }
+  }
+
+  private buildTaskOrderBy(groupBy: NonNullable<ListProjectTasksDto["groupBy"]>) {
+    if (groupBy === "assignee") {
+      return [{ assigneeId: "asc" }, { updatedAt: "desc" }, { id: "desc" }] satisfies Prisma.TaskOrderByWithRelationInput[];
+    }
+
+    if (groupBy === "module") {
+      return [{ moduleId: "asc" }, { updatedAt: "desc" }, { id: "desc" }] satisfies Prisma.TaskOrderByWithRelationInput[];
+    }
+
+    if (groupBy === "status") {
+      return [{ status: "asc" }, { updatedAt: "desc" }, { id: "desc" }] satisfies Prisma.TaskOrderByWithRelationInput[];
+    }
+
+    return [{ priority: "asc" }, { updatedAt: "desc" }, { id: "desc" }] satisfies Prisma.TaskOrderByWithRelationInput[];
+  }
+
+  private buildTaskGroups(items: TaskRecord[], groupBy: NonNullable<ListProjectTasksDto["groupBy"]>) {
+    const groups = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        count: number;
+      }
+    >();
+
+    for (const task of items) {
+      const descriptor = this.describeTaskGroup(task, groupBy);
+      const current = groups.get(descriptor.key) ?? {
+        key: descriptor.key,
+        label: descriptor.label,
+        count: 0,
+      };
+      current.count += 1;
+      groups.set(descriptor.key, current);
+    }
+
+    return Array.from(groups.values());
+  }
+
+  private describeTaskGroup(task: TaskRecord, groupBy: NonNullable<ListProjectTasksDto["groupBy"]>) {
+    if (groupBy === "assignee") {
+      return task.assignee
+        ? {
+            key: task.assignee.id.toString(),
+            label: task.assignee.name,
+          }
+        : {
+            key: "unassigned",
+            label: "未分配",
+          };
+    }
+
+    if (groupBy === "module") {
+      return task.module
+        ? {
+            key: task.module.id.toString(),
+            label: task.module.name,
+          }
+        : {
+            key: "none",
+            label: "未分类",
+          };
+    }
+
+    if (groupBy === "status") {
+      return {
+        key: task.status,
+        label: task.status,
+      };
+    }
+
+    return {
+      key: task.priority,
+      label: task.priority,
+    };
   }
 }

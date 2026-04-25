@@ -21,6 +21,11 @@ export function getProjectTasks(projectId: string, filters: TaskListFilters) {
 export async function getProjectBoardTasks(projectId: string, filters: TaskBoardFilters) {
   const firstPage = await getProjectTasks(projectId, {
     ...filters,
+    groupBy: "assignee",
+    viewMode: "board",
+    verticalGroupBy: "status",
+    horizontalGroupBy: "assignee",
+    includeUnassigned: true,
     page: 1,
     pageSize: 100,
   });
@@ -34,6 +39,11 @@ export async function getProjectBoardTasks(projectId: string, filters: TaskBoard
     pages.map((page) =>
       getProjectTasks(projectId, {
         ...filters,
+        groupBy: "assignee",
+        viewMode: "board",
+        verticalGroupBy: "status",
+        horizontalGroupBy: "assignee",
+        includeUnassigned: true,
         page,
         pageSize: 100,
       }),
@@ -84,6 +94,9 @@ export function updateTaskAssignee(taskId: string, assigneeId: string | null) {
 
 export async function getProjectTaskSummary(projectId: string) {
   const firstPage = await getProjectTasks(projectId, {
+    groupBy: "assignee",
+    viewMode: "list",
+    includeUnassigned: true,
     page: 1,
     pageSize: 100,
   });
@@ -96,6 +109,9 @@ export async function getProjectTaskSummary(projectId: string) {
   const otherPages = await Promise.all(
     pages.map((page) =>
       getProjectTasks(projectId, {
+        groupBy: "assignee",
+        viewMode: "list",
+        includeUnassigned: true,
         page,
         pageSize: 100,
       }),

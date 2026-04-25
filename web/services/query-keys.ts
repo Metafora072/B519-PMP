@@ -4,8 +4,10 @@ export const queryKeys = {
   },
   projects: {
     all: ["projects"] as const,
+    discoverable: ["projects", "discoverable"] as const,
     detail: (projectId: string) => ["projects", projectId] as const,
     members: (projectId: string) => ["projects", projectId, "members"] as const,
+    memberWorkloads: (projectId: string) => ["projects", projectId, "member-workloads"] as const,
     modules: (projectId: string) => ["projects", projectId, "modules"] as const,
     activities: (projectId: string, filters: Record<string, unknown>) =>
       ["projects", projectId, "activities", filters] as const,

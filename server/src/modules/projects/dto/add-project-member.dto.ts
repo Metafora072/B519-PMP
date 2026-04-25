@@ -1,6 +1,10 @@
-import { ProjectRole } from "@prisma/client";
 import { Transform } from "class-transformer";
-import { IsEnum, IsString, Matches } from "class-validator";
+import { IsIn, IsString, Matches } from "class-validator";
+
+import {
+  MANAGEABLE_PROJECT_ROLE_VALUES,
+  type ManageableProjectRoleValue,
+} from "../project-membership.constants";
 
 export class AddProjectMemberDto {
   @IsString()
@@ -8,7 +12,6 @@ export class AddProjectMemberDto {
   @Transform(({ value }) => value.trim())
   userId!: string;
 
-  @IsEnum(ProjectRole)
-  role!: ProjectRole;
+  @IsIn(MANAGEABLE_PROJECT_ROLE_VALUES)
+  role!: ManageableProjectRoleValue;
 }
-
